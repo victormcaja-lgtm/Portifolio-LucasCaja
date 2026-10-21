@@ -69,8 +69,28 @@ describe("ProjectCard", () => {
     expect(hasAll).toBe(true);
   });
 
-  it("CA-07: cards não são links nesta task", () => {
+  // TASK-02 CA-08 substitui o teste da TASK-01 "cards não são links".
+  it("CA-08 (TASK-02): o card tem exatamente um link, para /trabalhos/{slug}", () => {
     render(<ProjectCard project={project} position={1} slot={slot} />);
-    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", `/trabalhos/${project.slug}`);
+  });
+
+  it("CA-08 (TASK-02): o nome acessível do link é igual ao título do projeto", () => {
+    render(<ProjectCard project={project} position={1} slot={slot} />);
+    expect(screen.getByRole("link")).toHaveAccessibleName(project.title);
+  });
+
+  it("CA-08 (TASK-02): o link fica dentro do card (article)", () => {
+    render(<ProjectCard project={project} position={1} slot={slot} />);
+    expect(screen.getByRole("article").contains(screen.getByRole("link"))).toBe(true);
+  });
+
+  it("CA-08 (TASK-02): href e nome acompanham o projeto recebido", () => {
+    const other = makeProject({ slug: "outra-serie", title: "Outra Série" });
+    render(<ProjectCard project={other} position={2} slot={slot} />);
+    const link = screen.getByRole("link", { name: "Outra Série" });
+    expect(link).toHaveAttribute("href", "/trabalhos/outra-serie");
   });
 });

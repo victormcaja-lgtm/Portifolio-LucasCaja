@@ -24,6 +24,7 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
     cover: makeImage({ alt: `Capa do projeto ${n}` }),
     sortOrder: n,
     isDemo: true,
+    gallery: [],
     ...overrides,
   };
 }

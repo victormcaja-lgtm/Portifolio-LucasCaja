@@ -48,3 +48,18 @@ describe("collectImageCredits", () => {
     expect(collectImageCredits([img("a"), img("b")])).toEqual([]);
   });
 });
+
+describe("collectImageCredits — complementos (CA-10)", () => {
+  it("CA-10: não muta a lista de entrada", () => {
+    const images = Object.freeze([img("a", ana), img("b", ana), img("c", bruno)]);
+    const copy = images.map((i) => ({ ...i }));
+    collectImageCredits(images);
+    expect(images).toEqual(copy);
+  });
+
+  it("CA-10: capa + galeria de um projeto → créditos na ordem capa, galeria", () => {
+    const cover = img("capa", bruno);
+    const gallery = [img("g1", ana), img("g2", bruno), img("g3", anaOutra)];
+    expect(collectImageCredits([cover, ...gallery])).toEqual([bruno, ana, anaOutra]);
+  });
+});

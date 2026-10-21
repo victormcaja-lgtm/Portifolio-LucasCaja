@@ -88,6 +88,38 @@ describe("Página inicial (/)", () => {
     }
   });
 
+  it("CA-08 (TASK-02): cada card da grade tem exatamente um link para /trabalhos/{slug} com nome = título", () => {
+    render(<Home />);
+    const grid = screen.getByRole("region", { name: "Trabalhos" });
+    const items = within(grid).getAllByRole("listitem");
+    expect(items).toHaveLength(DEMO_PROJECTS.length);
+    for (const li of items) {
+      const title = within(li).getByRole("heading", { level: 3 }).textContent ?? "";
+      const project = DEMO_PROJECTS.find((p) => p.title === title);
+      expect(project, `projeto "${title}"`).toBeDefined();
+      const links = within(li).getAllByRole("link");
+      expect(links).toHaveLength(1);
+      expect(links[0]).toHaveAttribute("href", `/trabalhos/${project!.slug}`);
+      expect(links[0]).toHaveAccessibleName(project!.title);
+    }
+  });
+
+  it("CA-09 (TASK-02): o header da home usa variant overlay e links /#trabalhos e /#contato", () => {
+    render(<Home />);
+    const header = screen.getByRole("banner");
+    expect(header).toHaveAttribute("data-variant", "overlay");
+    const nav = within(header).getByRole("navigation", { name: "Principal" });
+    expect(within(nav).getByRole("link", { name: "Trabalhos" })).toHaveAttribute("href", "/#trabalhos");
+    expect(within(nav).getByRole("link", { name: "Contato" })).toHaveAttribute("href", "/#contato");
+  });
+
+  it('CA-15 (TASK-02): o <img> do hero tem fetchpriority="high" e loading="eager"', () => {
+    render(<Home />);
+    const hero = screen.getByRole("img", { name: DEMO_HERO.alt });
+    expect(hero).toHaveAttribute("fetchpriority", "high");
+    expect(hero).toHaveAttribute("loading", "eager");
+  });
+
   it("CA-12: somente a imagem do hero é carregada com prioridade", () => {
     const { container } = render(<Home />);
     const prioritized = [...container.querySelectorAll("img")].filter(

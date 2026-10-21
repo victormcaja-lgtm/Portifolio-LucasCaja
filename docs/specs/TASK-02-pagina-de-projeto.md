@@ -122,7 +122,7 @@ Se `previous` ou `next` for `null`, o link correspondente não é renderizado.
 
 **CA-06 404.** `NotFoundView` renderiza um `h1` "Página não encontrada", uma frase curta e um link "Voltar ao início" para `/`.
 
-**CA-07 Metadata.** `buildProjectMetadata` segue o contrato. A página de projeto a usa em `generateMetadata`.
+**CA-07 Metadata.** `buildProjectMetadata` segue o contrato. A página de projeto a usa em `generateMetadata`, que devolve `{ title: { absolute: meta.title }, description: meta.description }`. O `absolute` evita que o `title.template` do layout duplique o nome do site.
 
 **CA-08 Card com link.** Na página inicial, cada card tem exatamente um link para `/trabalhos/{slug}`, com nome acessível igual ao título. O teste da TASK-01 "cards não são links" é **substituído** por este critério.
 

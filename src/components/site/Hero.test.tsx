@@ -22,12 +22,11 @@ describe("Hero", () => {
     expect(screen.getByRole("img", { name: image.alt })).toBeInTheDocument();
   });
 
-  it("CA-01: carrega a imagem com prioridade (fetchpriority=high ou loading=eager)", () => {
+  it('CA-01/CA-15: carrega a imagem com prioridade — fetchpriority="high" E loading="eager"', () => {
     render(<Hero image={image} />);
     const img = screen.getByRole("img", { name: image.alt });
-    const prioritized =
-      img.getAttribute("fetchpriority") === "high" || img.getAttribute("loading") === "eager";
-    expect(prioritized).toBe(true);
+    expect(img).toHaveAttribute("fetchpriority", "high");
+    expect(img).toHaveAttribute("loading", "eager");
   });
 
   it("CA-12: a imagem vem de next/image com sizes definido", () => {

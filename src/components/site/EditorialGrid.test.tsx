@@ -140,8 +140,18 @@ describe("EditorialGrid", () => {
     expect(multiColumnBelowMd).toEqual([]);
   });
 
-  it("CA-07: os cards não são links", () => {
+  // TASK-02 CA-08 substitui o teste da TASK-01 "os cards não são links".
+  it("CA-08 (TASK-02): cada card tem exatamente um link para /trabalhos/{slug} com nome = título", () => {
     render(<EditorialGrid projects={projects} />);
-    expect(within(getList()).queryAllByRole("link")).toHaveLength(0);
+    const items = within(getList()).getAllByRole("listitem");
+    expect(items).toHaveLength(projects.length);
+    for (const li of items) {
+      const title = within(li).getByRole("heading", { level: 3 }).textContent ?? "";
+      const project = projects.find((p) => p.title === title)!;
+      const links = within(li).getAllByRole("link");
+      expect(links).toHaveLength(1);
+      expect(links[0]).toHaveAttribute("href", `/trabalhos/${project.slug}`);
+      expect(links[0]).toHaveAccessibleName(project.title);
+    }
   });
 });
