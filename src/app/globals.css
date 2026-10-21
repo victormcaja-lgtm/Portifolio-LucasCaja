@@ -1,26 +1,157 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Design system — tokens (docs/DESIGN-SYSTEM.md).
+ * Tema único claro: o site não acompanha o modo escuro do sistema (decisão de direção de arte).
+ */
+@theme {
+  /* Cores */
+  --color-paper: #f5f3ee;
+  --color-paper-raised: #fbfaf7;
+  --color-ink: #141413;
+  --color-ink-muted: #5e5a54;
+  --color-rule: #d9d5cc;
+  --color-signal: #9a3b1f;
+
+  /* Tipografia */
+  --text-display: clamp(3rem, 9vw, 9rem);
+  --text-display--line-height: 0.9;
+  --text-headline: clamp(2rem, 4.5vw, 4rem);
+  --text-headline--line-height: 1;
+  --text-title: clamp(1.375rem, 2vw, 1.75rem);
+  --text-title--line-height: 1.2;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.16em;
+
+  /* Movimento */
+  --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-reveal: 900ms;
+  --duration-ui: 300ms;
+  --duration-image: 1200ms;
+  --duration-cue: 2400ms;
+
+  /* Espaçamento e largura */
+  --spacing-section: clamp(6rem, 14vw, 14rem);
+  --container-page: 100rem;
 }
 
+/* Famílias carregadas por next/font (variáveis definidas em <html>). */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-cormorant), "Times New Roman", serif;
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Durações nomeadas: `duration-ui`, `duration-reveal`, `duration-image`. */
+@utility duration-ui {
+  transition-duration: var(--duration-ui);
+}
+
+@utility duration-reveal {
+  transition-duration: var(--duration-reveal);
+}
+
+@utility duration-image {
+  transition-duration: var(--duration-image);
+}
+
+@layer base {
+  html {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  /* Foco visível: contorno 2px na cor do texto (tinta sobre papel, papel sobre foto). */
+  :focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/*
+ * Revelação na rolagem (componente Reveal).
+ * Só oculta quando o JavaScript está ativo (classe `js` aplicada em <html> por script inline);
+ * sem JavaScript, todo o conteúdo permanece visível.
+ */
+.js [data-revealed] {
+  transition-property: opacity, transform;
+  transition-duration: var(--duration-reveal);
+  transition-timing-function: var(--ease-editorial);
+}
+
+.js [data-revealed="false"] {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+/* Imagem de capa: aproximação lenta no hover do card. */
+.card-image {
+  transition: transform var(--duration-image) var(--ease-editorial);
+}
+
+article:hover .card-image {
+  transform: scale(1.03);
+}
+
+/* Indicador de rolagem do hero: linha fina que respira. */
+@keyframes scroll-cue {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  45% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  55% {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+
+.scroll-cue {
+  animation: scroll-cue var(--duration-cue) var(--ease-editorial) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-revealed],
+  .js [data-revealed="false"] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .card-image,
+  article:hover .card-image {
+    transform: none;
+    transition: none;
+  }
+
+  .scroll-cue {
+    animation: none;
+  }
 }

@@ -31,3 +31,68 @@ export function mockReducedMotion(reduce: boolean): void {
     return false;
   });
 }
+
+export interface MatchMediaController {
+  /** Troca o critério de correspondência e dispara `change` nas listas cujo `matches` mudou. */
+  setMatcher(matcher: (query: string) => boolean): void;
+}
+
+/**
+ * Como `mockMatchMedia`, mas as `MediaQueryList` devolvidas são "vivas": guardam ouvintes
+ * (`addEventListener("change")`/`addListener`) e o controlador permite simular mudanças
+ * de viewport, disparando `change` como o navegador faria.
+ */
+export function mockMatchMediaControllable(
+  initial: (query: string) => boolean = () => false,
+): MatchMediaController {
+  let matcher = initial;
+  type Listener = (event: MediaQueryListEvent) => void;
+  const lists: Array<{ mql: MediaQueryList; listeners: Set<Listener>; last: boolean }> = [];
+
+  const impl = vi.fn((query: string): MediaQueryList => {
+    const listeners = new Set<Listener>();
+    const entry = { mql: undefined as unknown as MediaQueryList, listeners, last: matcher(query) };
+    const mql = {
+      get matches() {
+        return matcher(query);
+      },
+      media: query,
+      onchange: null,
+      addListener: (fn: Listener | null) => {
+        if (fn) listeners.add(fn);
+      },
+      removeListener: (fn: Listener | null) => {
+        if (fn) listeners.delete(fn);
+      },
+      addEventListener: (type: string, fn: Listener) => {
+        if (type === "change") listeners.add(fn);
+      },
+      removeEventListener: (type: string, fn: Listener) => {
+        if (type === "change") listeners.delete(fn);
+      },
+      dispatchEvent: () => false,
+    } as unknown as MediaQueryList;
+    entry.mql = mql;
+    lists.push(entry);
+    return mql;
+  });
+
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: impl,
+  });
+
+  return {
+    setMatcher(next) {
+      matcher = next;
+      for (const entry of lists) {
+        const now = matcher(entry.mql.media);
+        if (now === entry.last) continue;
+        entry.last = now;
+        const event = { matches: now, media: entry.mql.media } as MediaQueryListEvent;
+        for (const fn of [...entry.listeners]) fn(event);
+      }
+    },
+  };
+}
