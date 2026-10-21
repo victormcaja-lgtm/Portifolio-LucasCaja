@@ -13,13 +13,15 @@ export interface EditorialSlot {
  * Ritmo editorial de 6 tempos. Com o auto-posicionamento da grade de 12 colunas,
  * resulta em linhas alternadas: par assimétrico (largo + estreito deslocado),
  * peça isolada ao centro, par invertido, respiro estreito ao centro.
+ * Nos dois pares o deslocamento vertical fica na peça estreita (a mais baixa), para que as
+ * duas colunas terminem próximas e a cadência vertical se repita — sem vão sob o par invertido.
  */
 const PATTERN: readonly EditorialSlot[] = Object.freeze([
   { span: "wide", align: "start", aspect: "landscape", offset: false },
   { span: "narrow", align: "end", aspect: "portrait", offset: true },
   { span: "medium", align: "center", aspect: "portrait", offset: false },
-  { span: "narrow", align: "start", aspect: "square", offset: false },
-  { span: "wide", align: "end", aspect: "landscape", offset: true },
+  { span: "narrow", align: "start", aspect: "square", offset: true },
+  { span: "wide", align: "end", aspect: "landscape", offset: false },
   { span: "narrow", align: "center", aspect: "portrait", offset: false },
 ]);
 

@@ -36,7 +36,7 @@ export function SiteFooter({ credits }: SiteFooterProps) {
                       href={credit.sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-11 items-center font-sans text-label text-ink-muted uppercase underline-offset-4 transition-colors duration-ui ease-editorial hover:text-ink hover:underline"
+                      className="inline-flex min-h-11 items-center font-sans text-label text-ink-muted uppercase underline-offset-4 transition-colors duration-ui ease-editorial hover:text-ink hover:underline focus-visible:outline-ink"
                     >
                       {credit.author}
                       <span className="sr-only"> (Unsplash, abre em nova aba)</span>

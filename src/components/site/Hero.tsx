@@ -2,6 +2,12 @@ import Image from "next/image";
 import { SITE } from "@/lib/site-config";
 import type { ImageAsset } from "@/lib/types";
 
+/**
+ * Com object-cover em viewport mais estreita que a foto (3:2), a imagem é dimensionada pela
+ * altura (100svh) e fica com 150svh de largura; em paisagem, ocupa a largura da viewport.
+ */
+const HERO_SIZES = "(max-aspect-ratio: 3/2) 150svh, 100vw";
+
 interface HeroProps {
   image: ImageAsset;
 }
@@ -19,7 +25,7 @@ export function Hero({ image }: HeroProps) {
         fill
         loading="eager"
         fetchPriority="high"
-        sizes="100vw"
+        sizes={HERO_SIZES}
         className="-z-20 object-cover object-center"
       />
       {/* Véu em gradiente para garantir a legibilidade do texto sobre a fotografia. */}
@@ -28,13 +34,11 @@ export function Hero({ image }: HeroProps) {
         className="absolute inset-0 -z-10 bg-linear-to-t from-ink/70 via-ink/15 to-transparent"
       />
       {/*
-        Véu superior sob o cabeçalho transparente: ≥ 65% de tinta em toda a altura do
-        cabeçalho (metade superior da faixa), para contraste AA mesmo sobre céu claro.
+        Véu superior sob o cabeçalho transparente: gradiente com várias paradas (globals.css,
+        .hero-veil-top) que mantém ≥ 66% de tinta em toda a altura do cabeçalho — contraste AA
+        do texto paper mesmo sobre céu claro — e se dissolve sem faixa chapada.
       */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 -z-10 h-[30%] min-h-48 bg-linear-to-b from-ink/75 via-ink/65 via-50% to-transparent"
-      />
+      <div aria-hidden="true" className="hero-veil-top absolute inset-x-0 top-0 -z-10 h-72 md:h-80" />
 
       <div className="mx-auto w-full max-w-page px-4 pr-12 pb-10 md:px-6 md:pr-24 md:pb-14 lg:px-10 lg:pr-28 lg:pb-16">
         <h1 className="font-display text-display font-light tracking-tight">{SITE.name}</h1>

@@ -61,6 +61,16 @@
     color: var(--color-ink);
     color-scheme: light;
     -webkit-text-size-adjust: 100%;
+    /* Âncoras e foco param abaixo do cabeçalho fixo (h-16; h-20 a partir de md). */
+    scroll-padding-top: 4rem;
+    /* Reserva a calha da barra de rolagem: travar a rolagem (menu aberto) não desloca o layout. */
+    scrollbar-gutter: stable;
+  }
+
+  @media (min-width: 48rem) {
+    html {
+      scroll-padding-top: 5rem;
+    }
   }
 
   body {
@@ -111,6 +121,26 @@
 
 article:hover .card-image {
   transform: scale(1.03);
+}
+
+/*
+ * Véu superior do hero, sob o cabeçalho transparente. Curva suave (várias paradas, sem faixa
+ * chapada). Para o texto `paper` manter contraste ≥ 4,5:1 mesmo sobre fundo branco, a tinta
+ * precisa cobrir ≥ 61%: a curva mantém ≥ 66% até 5rem (altura do cabeçalho em md; 4rem no mobile).
+ */
+.hero-veil-top {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-ink) 82%, transparent) 0%,
+    color-mix(in srgb, var(--color-ink) 76%, transparent) 2.5rem,
+    color-mix(in srgb, var(--color-ink) 66%, transparent) 5rem,
+    color-mix(in srgb, var(--color-ink) 52%, transparent) 7rem,
+    color-mix(in srgb, var(--color-ink) 37%, transparent) 9rem,
+    color-mix(in srgb, var(--color-ink) 24%, transparent) 11rem,
+    color-mix(in srgb, var(--color-ink) 12%, transparent) 13.5rem,
+    color-mix(in srgb, var(--color-ink) 4%, transparent) 16rem,
+    transparent 100%
+  );
 }
 
 /* Indicador de rolagem do hero: linha fina que respira. */

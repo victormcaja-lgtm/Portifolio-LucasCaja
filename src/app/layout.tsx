@@ -33,6 +33,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
+      // Rolagem suave (globals.css) só nas âncoras: o Next a desliga durante a troca de rota.
+      data-scroll-behavior="smooth"
       className={`${display.variable} ${sans.variable} h-full antialiased`}
       suppressHydrationWarning
     >

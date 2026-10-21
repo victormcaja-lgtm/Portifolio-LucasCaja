@@ -5,9 +5,17 @@ import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore }
 import { SITE } from "@/lib/site-config";
 
 const NAV_LINKS = [
-  { href: "#trabalhos", label: "Trabalhos" },
-  { href: "#contato", label: "Contato" },
+  { href: "/#trabalhos", label: "Trabalhos" },
+  { href: "/#contato", label: "Contato" },
 ] as const;
+
+/**
+ * Conteúdo da página que fica inerte com o menu aberto: skip link, <main> e <footer>.
+ * Nada além disso — o anunciador de rota do Next, scripts e portais continuam ativos.
+ * O skip link é identificado pelo atributo `data-skip-link` (definido em SkipLink); o seletor
+ * por href é mantido como alternativa para um link de pulo sem o atributo.
+ */
+const INERT_SELECTOR = '[data-skip-link], a[href="#conteudo"], main, footer';
 
 /** Distância rolada a partir da qual o cabeçalho ganha fundo `paper`. */
 const SCROLL_THRESHOLD = 48;
@@ -25,17 +33,25 @@ function getServerScrolled(): boolean {
   return false;
 }
 
-export function SiteHeader() {
+interface SiteHeaderProps {
+  /** "overlay" (padrão): transparente sobre o hero. "solid": fundo paper desde o início. */
+  variant?: "overlay" | "solid";
+}
+
+export function SiteHeader({ variant = "overlay" }: SiteHeaderProps) {
   const panelId = useId();
   const [open, setOpen] = useState(false);
   const scrolled = useSyncExternalStore(subscribeToScroll, getScrolled, getServerScrolled);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const wordmarkRef = useRef<HTMLAnchorElement>(null);
 
-  const close = useCallback((restoreFocus: boolean) => {
+  /** Fecha o menu e, se pedido, leva o foco ao botão do menu ou ao wordmark. */
+  const close = useCallback((focusTarget: "toggle" | "wordmark" | null) => {
     setOpen(false);
-    if (restoreFocus) toggleRef.current?.focus();
+    if (focusTarget === "toggle") toggleRef.current?.focus();
+    if (focusTarget === "wordmark") wordmarkRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -46,22 +62,23 @@ export function SiteHeader() {
     panelRef.current?.querySelector<HTMLAnchorElement>("a")?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") close(true);
+      if (event.key === "Escape") close("toggle");
     }
     document.addEventListener("keydown", onKeyDown);
 
-    // Enquanto o menu está aberto, o restante da página (irmãos do cabeçalho) fica inerte:
-    // o foco (Tab e Shift+Tab) não escapa para o conteúdo escondido atrás do painel.
+    // Enquanto o menu está aberto, o conteúdo da página (irmãos do cabeçalho: skip link,
+    // <main> e <footer>) fica inerte: o foco não escapa para trás do painel.
     const header = headerRef.current;
     const siblings = Array.from(header?.parentElement?.children ?? []).filter(
-      (el) => el !== header && !el.hasAttribute("inert"),
+      (el) => el !== header && el.matches(INERT_SELECTOR) && !el.hasAttribute("inert"),
     );
     for (const el of siblings) el.setAttribute("inert", "");
 
-    // Ao passar para md, o painel mobile deixa de existir: fecha o menu e libera a página.
+    // Ao passar para md, o painel mobile deixa de existir: fecha o menu, libera a página e
+    // leva o foco ao wordmark (o botão do menu some em md; o foco não pode cair no <body>).
     const desktop = window.matchMedia("(min-width: 48rem)");
     function onViewportChange(event: MediaQueryListEvent) {
-      if (event.matches) close(false);
+      if (event.matches) close("wordmark");
     }
     desktop.addEventListener("change", onViewportChange);
 
@@ -74,17 +91,22 @@ export function SiteHeader() {
   }, [open, close]);
 
   // Sobre o hero (topo da página, menu fechado) o texto é claro; depois, tinta sobre papel.
-  const solid = scrolled || open;
+  // Na variante "solid" (páginas sem hero) é tinta sobre papel desde o início.
+  const isSolidVariant = variant === "solid";
+  const solid = isSolidVariant || scrolled || open;
+  const bordered = (isSolidVariant || scrolled) && !open;
 
   return (
     <header
       ref={headerRef}
+      data-variant={variant}
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-ui ease-editorial ${
         solid ? "bg-paper text-ink" : "bg-transparent text-paper"
-      } ${scrolled && !open ? "border-b border-rule" : "border-b border-transparent"}`}
+      } ${bordered ? "border-b border-rule" : "border-b border-transparent"}`}
     >
       <div className="mx-auto flex h-16 max-w-page items-center justify-between px-4 md:h-20 md:px-6 lg:px-10">
         <Link
+          ref={wordmarkRef}
           href="/"
           onClick={() => setOpen(false)}
           className="-ml-2 inline-flex min-h-11 items-center px-2 font-display text-2xl leading-none font-normal tracking-tight"
@@ -96,14 +118,14 @@ export function SiteHeader() {
           <ul className="flex items-center gap-2">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
-                <a
+                <Link
                   href={link.href}
                   className={`inline-flex min-h-11 items-center px-3 font-sans text-label uppercase transition-opacity duration-ui ease-editorial ${
                     solid ? "opacity-80 hover:opacity-100" : ""
                   }`}
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -135,13 +157,13 @@ export function SiteHeader() {
                 <span aria-hidden="true" className="font-display text-lg font-light text-ink-muted italic">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <a
+                <Link
                   href={link.href}
-                  onClick={() => close(false)}
+                  onClick={() => close(null)}
                   className="block flex-1 py-4 font-display text-headline leading-none font-light"
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>

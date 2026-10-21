@@ -31,4 +31,8 @@ export interface Project {
   cover: ImageAsset;
   sortOrder: number;
   isDemo: boolean;
+  /** Texto curto do projeto. */
+  summary?: string;
+  /** Imagens além da capa (pode ser vazio). */
+  gallery: readonly ImageAsset[];
 }

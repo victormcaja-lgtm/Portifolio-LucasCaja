@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Reveal } from "@/components/ui/Reveal";
 import { getCategoryName } from "@/lib/categories";
 import { getSlotClassName, type EditorialSlot, type SlotAspect, type SlotSpan } from "@/lib/editorial-layout";
@@ -31,13 +32,21 @@ const SIZES: Record<SlotSpan, string> = {
   narrow: "(min-width: 1600px) 520px, (min-width: 768px) 34vw, 80vw",
 };
 
+/** Contorno de foco no card quando o link interno recebe foco pelo teclado. */
+const CARD_FOCUS_CLASS =
+  "has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-8 has-[a:focus-visible]:outline-ink";
+
 export function ProjectCard({ project, position, slot }: ProjectCardProps) {
   const index = formatProjectIndex(position);
   const categories = project.categories.map(getCategoryName);
 
   return (
-    <article className={`${getSlotClassName(slot)}${mobileClassName(slot)}`}>
-      <Reveal>
+    // O link do título se estende sobre o card inteiro (pseudo-elemento); o foco visível é
+    // desenhado no card, não no texto do link.
+    <article
+      className={`${getSlotClassName(slot)}${mobileClassName(slot)} ${CARD_FOCUS_CLASS}`}
+    >
+      <Reveal className="relative">
         <div className="mb-4 flex items-baseline justify-between gap-4">
           <span className="font-display text-lg font-light text-ink-muted italic">{index}</span>
           {project.isDemo ? (
@@ -57,7 +66,12 @@ export function ProjectCard({ project, position, slot }: ProjectCardProps) {
 
         <div className="mt-5 flex flex-col gap-2">
           <h3 className="font-display text-title leading-tight font-normal text-ink">
-            {project.title}
+            <Link
+              href={`/trabalhos/${project.slug}`}
+              className="after:absolute after:inset-0 focus-visible:outline-none"
+            >
+              {project.title}
+            </Link>
           </h3>
           <p className="font-sans text-label text-ink-muted uppercase">
             {categories.join(" · ")}

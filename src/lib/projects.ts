@@ -22,3 +22,27 @@ export function formatProjectIndex(position: number): string {
   }
   return String(position).padStart(2, "0");
 }
+
+/** Projeto com o slug exato informado, ou `undefined`. */
+export function getProjectBySlug(projects: readonly Project[], slug: string): Project | undefined {
+  return projects.find((p) => p.slug === slug);
+}
+
+/**
+ * Vizinhos do projeto na ordem de `sortOrder`, de forma circular.
+ * Lista com um único projeto → ambos `null`. Slug inexistente → lança `Error`.
+ */
+export function getAdjacentProjects(
+  projects: readonly Project[],
+  slug: string,
+): { previous: Project | null; next: Project | null } {
+  const sorted = sortProjects(projects);
+  const index = sorted.findIndex((p) => p.slug === slug);
+  if (index === -1) throw new Error(`Projeto inexistente: ${slug}`);
+  if (sorted.length === 1) return { previous: null, next: null };
+  const count = sorted.length;
+  return {
+    previous: sorted[(index - 1 + count) % count],
+    next: sorted[(index + 1) % count],
+  };
+}
