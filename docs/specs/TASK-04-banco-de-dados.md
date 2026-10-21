@@ -131,3 +131,7 @@ O `npm run test` principal **não** depende do Docker.
 **CA-08 Sem regressão.** As páginas públicas continuam funcionando com `src/content/demo.ts`, sem exigir banco. `npm run build` passa **sem** `DATABASE_URL` definida. O `postinstall`/`prisma generate` também não exige a variável.
 
 **CA-09 Qualidade.** Passam `npm run lint`, `npm run typecheck`, `npm run test:coverage` (≥ 80%; a cobertura inclui `src/server/**` exceto `db.ts` e `src/generated/**`), `npm run test:integration` e `npm run build`.
+
+## Decisão registrada: proxy de 404 × banco
+
+O `src/proxy.ts`, criado na TASK-02, valida slugs contra `DEMO_PROJECTS`. Ao migrar as páginas para o banco (TASK-04b), **não** consultar o banco a cada requisição no proxy, como orienta a documentação do Next ("Keep Proxy checks fast"). A abordagem escolhida está em aberto para a TASK-04b: lista de slugs publicados gerada no build ou consulta leve em cache. Nesta TASK-04, o proxy não muda.

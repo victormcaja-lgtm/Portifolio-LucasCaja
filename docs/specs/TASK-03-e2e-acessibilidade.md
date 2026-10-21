@@ -44,3 +44,12 @@ O `playwright.config.ts` é escrito pelo agente Teste:
 **CA-10 Sem erros no console.** Carregar `/` e uma página de projeto não gera `console.error` nem erro de página (`pageerror`).
 
 **CA-11 Qualidade.** `npm run test:e2e` passa nos dois projetos. `npm run lint`, `npm run typecheck` e `npm run test` continuam passando.
+
+## Acréscimo (pós TASK-02)
+
+**CA-12 Proxy de 404.** O `src/proxy.ts` reescreve `/trabalhos/<slug inexistente>` para `/404`. O E2E confirma:
+- o status é 404;
+- o **HTML do servidor** (via `request.get`, sem executar JavaScript) já contém o `h1` "Página não encontrada";
+- um slug existente segue com status 200.
+
+Além disso, um teste unitário do proxy (`src/proxy.test.ts`, com `NextRequest`) cobre os dois ramos, e `src/proxy.ts` entra no `coverage.include`.
