@@ -46,6 +46,7 @@ interface DemoGalleryInput {
 interface DemoProjectInput {
   slug: string;
   title: string;
+  /** Na ordem canônica de CATEGORIES (a mesma que o banco devolve; ver src/server/mappers.ts). */
   categories: CategorySlug[];
   imageId: number;
   aspect: keyof typeof COVER_SIZE;
@@ -229,7 +230,7 @@ const INPUTS: readonly DemoProjectInput[] = [
   {
     slug: "colecao-ii",
     title: "Coleção II — Demonstração",
-    categories: ["high-fashion", "fashion-editorial"],
+    categories: ["fashion-editorial", "high-fashion"],
     imageId: 978,
     aspect: "portrait",
     alt: "Rosto de uma mulher refletido em um vidro — imagem de demonstração",
@@ -255,7 +256,7 @@ const INPUTS: readonly DemoProjectInput[] = [
   {
     slug: "filme-iii",
     title: "Filme III — Demonstração",
-    categories: ["filme", "fine-art"],
+    categories: ["fine-art", "filme"],
     imageId: 680,
     aspect: "portrait",
     alt: "Mão apoiada contra um vidro coberto de gotas — imagem de demonstração",

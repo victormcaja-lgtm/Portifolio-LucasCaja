@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "blob-report/**",
+    // Cliente Prisma gerado por `prisma generate`.
+    "src/generated/**",
   ]),
 ]);
 

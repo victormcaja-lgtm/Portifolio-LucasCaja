@@ -58,16 +58,16 @@ Legenda: ✅ existe hoje · ⏳ planejado
 ```
 .claude/agents/          ✅ dev, teste, revisor, ui-ux
 docs/                    ✅ arquitetura, spec, design system, processo
-prisma/                  ⏳ schema.prisma, migrations/, seed.ts
-prisma.config.ts         ⏳ configuração do Prisma 7
-docker-compose.yml       ⏳ Postgres local (porta 5434)
+prisma/                  ✅ schema.prisma, migrations/, seed.ts
+prisma.config.ts         ✅ configuração do Prisma 7
+docker-compose.yml       ✅ Postgres local (porta 5434)
 public/                  ✅ arquivos estáticos
 src/
   app/
     layout.tsx           ✅ fontes, metadata, idioma pt-BR
     page.tsx             ✅ página inicial (etapa 1)
     globals.css          ✅ tokens do design system
-    trabalhos/[slug]/    ⏳ página de projeto
+    trabalhos/[slug]/    ✅ página de projeto · not-found.tsx ✅ 404
     sobre/  contato/     ⏳ quando houver conteúdo real fornecido pelo fotógrafo
     admin/               ⏳ painel (login, projetos, categorias, mídia, usuários)
     api/auth/[...all]/   ⏳ Better Auth
@@ -78,9 +78,9 @@ src/
     admin/               ⏳
   content/               ✅ demo.ts — conteúdo de DEMONSTRAÇÃO (removido quando houver banco)
   lib/                   ✅ funções puras e tipos de domínio
-  server/                ⏳ db.ts (Prisma), auth.ts, cloudinary.ts, repositórios
+  server/                ✅ env.ts, db.ts, mappers.ts, repositories/ · ⏳ auth.ts, cloudinary.ts
   test/                  ✅ setup do Vitest
-tests/e2e/               ⏳ Playwright
+tests/e2e/               ✅ Playwright · tests/integration/ ✅ Postgres real
 ```
 
 ## 5. Modelo de dados (planejado — Prisma)
@@ -203,10 +203,11 @@ Cada etapa é pequena, testável e passa pelo fluxo Teste → Dev → Teste → 
 
 | # | Etapa | Entrega testável | Status |
 |---|---|---|---|
-| 1 | **Página inicial com conteúdo de demonstração** | hero, grade editorial assimétrica, filtro, header, rodapé, responsivo; testes unitários | em andamento |
-| 2 | Página de projeto (`/trabalhos/[slug]`) com dados demo | galeria vertical editorial, navegação anterior/próximo, 404 | ⏳ |
-| 3 | Testes E2E (Playwright) e auditoria de acessibilidade/performance | smoke desktop + mobile, axe | ⏳ |
-| 4 | Banco de dados: Docker Postgres + Prisma schema + migração + seed demo; repositório troca `content/demo.ts` por Prisma | `npm run db:migrate`, testes de repositório | ⏳ |
+| 1 | **Página inicial com conteúdo de demonstração** | hero, grade editorial assimétrica, filtro, header, rodapé, responsivo; testes unitários | ✅ concluída |
+| 2 | Página de projeto (`/trabalhos/[slug]`) com dados demo | galeria vertical editorial, navegação anterior/próximo, 404 | ✅ concluída |
+| 3 | Testes E2E (Playwright) e auditoria de acessibilidade/performance | smoke desktop + mobile, axe | ✅ concluída |
+| 4 | Banco de dados: Docker Postgres + Prisma schema + migração + seed demo; repositório troca `content/demo.ts` por Prisma | `npm run db:migrate`, testes de repositório | ✅ concluída (as páginas ainda leem o conteúdo demo; a troca é a etapa 4b) |
+| 4b | Páginas públicas lendo do banco (estratégia de cache e do proxy de 404) | páginas servidas pelo Postgres, build sem banco continua possível | ⏳ |
 | 5 | Autenticação: Better Auth, login, proteção do `/admin`, papéis | login/logout, acesso negado por papel | ⏳ |
 | 6 | Cloudinary: assinatura de upload, upload de foto/vídeo, metadados salvos em `Media` | upload real com credenciais do usuário | ⏳ |
 | 7 | Painel: CRUD de projetos, categorias, ordenação, publicação | fluxos completos no painel | ⏳ |

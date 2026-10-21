@@ -1,0 +1,124 @@
+// Schema do portfólio (TASK-04). Veja docs/ARQUITETURA.md §5 e docs/specs/TASK-04-banco-de-dados.md.
+// A conexão (DATABASE_URL) é configurada em prisma.config.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+}
+
+enum ProjectStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+/// EXTERNAL = imagens de demonstração (Picsum); CLOUDINARY = acervo real (TASK-06).
+enum MediaProvider {
+  CLOUDINARY
+  EXTERNAL
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(EDITOR)
+  banned        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  projects      Project[] @relation("ProjectAuthor")
+  media         Media[]   @relation("MediaUploader")
+}
+
+model Category {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  description String?
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  projects    ProjectCategory[]
+}
+
+model Project {
+  id          String            @id @default(cuid())
+  title       String
+  slug        String            @unique
+  summary     String?
+  /// Texto do projeto (markdown simples).
+  body        String?
+  /// Ficha técnica informada pelo fotógrafo.
+  credits     String?
+  status      ProjectStatus     @default(DRAFT)
+  featured    Boolean           @default(false)
+  /// Conteúdo de demonstração (não representa trabalho real).
+  isDemo      Boolean           @default(false)
+  sortOrder   Int               @default(0)
+  publishedAt DateTime?
+  coverId     String?           @unique
+  cover       Media?            @relation("ProjectCover", fields: [coverId], references: [id], onDelete: SetNull)
+  media       Media[]           @relation("ProjectMedia")
+  categories  ProjectCategory[]
+  authorId    String?
+  author      User?             @relation("ProjectAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([status, sortOrder])
+}
+
+model ProjectCategory {
+  projectId  String
+  categoryId String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, categoryId])
+}
+
+/// Regra (CHECK na migração + assertValidMedia): CLOUDINARY exige publicId; EXTERNAL exige url.
+model Media {
+  id           String        @id @default(cuid())
+  type         MediaType
+  provider     MediaProvider
+  /// public_id do Cloudinary.
+  publicId     String?       @unique
+  url          String?
+  width        Int
+  height       Int
+  durationSec  Float?
+  bytes        Int?
+  format       String?
+  /// Obrigatório (não vazio) para imagens.
+  alt          String
+  caption      String?
+  creditAuthor String?
+  creditUrl    String?
+  sortOrder    Int           @default(0)
+  projectId    String?
+  project      Project?      @relation("ProjectMedia", fields: [projectId], references: [id], onDelete: Cascade)
+  coverOf      Project?      @relation("ProjectCover")
+  uploadedById String?
+  uploadedBy   User?         @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+
+  @@index([projectId, sortOrder])
+}
