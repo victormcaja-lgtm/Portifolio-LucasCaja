@@ -146,3 +146,6 @@ O `src/proxy.ts`, criado na TASK-02, valida slugs contra `DEMO_PROJECTS`. Ao mig
 - **Cliente gerado:** fica em `src/generated/prisma` (gerador `prisma-client`) e é importado pelo entrypoint `@/generated/prisma/client`.
 - **Testes de `src/server/**`:** usam `// @vitest-environment node`. O `server-only` é mockado nos testes unitários.
 - **Script:** `test:integration` = `vitest run -c vitest.integration.config.mts`.
+- **Ids determinísticos no seed.** O seed cria cada projeto com `id` igual ao de `DEMO_PROJECTS` (`demo-<slug>`). Assim, a ida e volta pelo banco produz exatamente o mesmo domínio, e o `upsert` fica estável.
+- **Nomes do schema.** Modelos sem `@@map`: delegates `db.user`, `db.category`, `db.project`, `db.projectCategory` e `db.media`. Tabelas `User`, `Category`, `Project`, `ProjectCategory` e `Media`.
+- **Repositórios.** Recebem `db` por parâmetro (opcional, com padrão `getDb()` chamado **dentro** da função). Importar o módulo não chama `getDb()` nem `getServerEnv()`.

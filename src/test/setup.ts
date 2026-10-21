@@ -57,11 +57,16 @@ vi.mock("next/image", () => {
   return { __esModule: true, default: MockImage };
 });
 
+// Mocks de DOM só se aplicam a testes em jsdom; testes de src/server usam `@vitest-environment node`.
+const hasDom = typeof window !== "undefined";
+
 beforeEach(() => {
+  if (!hasDom) return;
   installIntersectionObserver();
   mockMatchMedia();
 });
 
 afterEach(() => {
+  if (!hasDom) return;
   cleanup();
 });
