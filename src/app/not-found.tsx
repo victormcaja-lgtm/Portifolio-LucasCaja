@@ -11,7 +11,7 @@ export default function NotFound() {
     <>
       <SkipLink />
       <SiteHeader variant="solid" />
-      <main id="conteudo">
+      <main id="conteudo" tabIndex={-1} className="focus:outline-none">
         <NotFoundView />
       </main>
       <SiteFooter credits={[]} />

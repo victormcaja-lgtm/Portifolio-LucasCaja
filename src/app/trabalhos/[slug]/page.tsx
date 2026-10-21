@@ -62,7 +62,7 @@ export default async function ProjectPage({ params }: ProjectRouteProps) {
     <>
       <SkipLink />
       <SiteHeader variant="solid" />
-      <main id="conteudo">
+      <main id="conteudo" tabIndex={-1} className="focus:outline-none">
         <ProjectView project={project} previous={previous} next={next} />
       </main>
       <SiteFooter credits={credits} />

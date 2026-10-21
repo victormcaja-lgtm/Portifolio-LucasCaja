@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Relatórios gerados pelo vitest --coverage.
     "coverage/**",
+    // Relatórios gerados pelo Playwright.
+    "playwright-report/**",
+    "test-results/**",
+    "blob-report/**",
   ]),
 ]);
 

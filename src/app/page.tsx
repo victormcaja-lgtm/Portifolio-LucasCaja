@@ -14,7 +14,7 @@ export default function Home() {
     <>
       <SkipLink />
       <SiteHeader />
-      <main id="conteudo">
+      <main id="conteudo" tabIndex={-1} className="focus:outline-none">
         <Hero image={DEMO_HERO} />
         <DemoNotice />
         <EditorialGrid projects={DEMO_PROJECTS} />
