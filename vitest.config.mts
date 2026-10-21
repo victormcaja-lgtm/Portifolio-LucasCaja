@@ -14,7 +14,7 @@ export default defineConfig({
     css: false,
     coverage: {
       provider: "v8",
-      include: ["src/lib/**", "src/components/**", "src/content/**"],
+      include: ["src/lib/**", "src/components/**", "src/content/**", "src/proxy.ts"],
       exclude: ["**/*.test.*", "src/test/**", "src/lib/types.ts"],
       reporter: ["text", "html"],
       thresholds: {
