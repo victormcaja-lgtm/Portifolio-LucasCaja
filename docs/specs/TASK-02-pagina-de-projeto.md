@@ -143,3 +143,16 @@ Se `previous` ou `next` for `null`, o link correspondente não é renderizado.
 - `npm run typecheck`;
 - `npm run test:coverage`, com ≥ 80%;
 - `npm run build`, gerando as 10 rotas de projeto.
+
+## Pendências herdadas da TASK-01 (entram nesta task)
+
+**CA-13 Escopo do `inert`.** Com o menu mobile aberto, o `inert` vale somente para o conteúdo da página: o skip link, o `<main>` e o `<footer>`. Fica de fora qualquer outro elemento do `<body>`, especialmente `next-route-announcer`, `<script>` e portais. Agora existe navegação entre rotas, e o anunciador de rota não pode ser silenciado.
+
+**CA-14 Foco ao virar `md`.** Quando o menu fecha porque a viewport passou para `md`, o foco vai para o wordmark e não se perde no `<body>`.
+
+**CA-15 Asserções do hero.** O `<img>` do hero tem **ambos**, `fetchpriority="high"` e `loading="eager"`. Os testes passam a exigir os dois.
+
+**Refinamentos visuais, sem teste unitário (avaliados pelo UI/UX):**
+- O véu superior do hero passa a usar um gradiente com mais paradas, sem faixa chapada. O contraste do header deve continuar ≥ 4,5:1.
+- O `sizes` do hero deve considerar o recorte `object-cover` em viewport retrato, por exemplo `(max-aspect-ratio: 3/2) 150svh, 100vw`.
+- Na grade em `lg`, o par 03/04 deve ter cadência consistente com os demais pares, sem o vão de cerca de 580 px abaixo do 04.
