@@ -135,3 +135,14 @@ O `npm run test` principal **não** depende do Docker.
 ## Decisão registrada: proxy de 404 × banco
 
 O `src/proxy.ts`, criado na TASK-02, valida slugs contra `DEMO_PROJECTS`. Ao migrar as páginas para o banco (TASK-04b), **não** consultar o banco a cada requisição no proxy, como orienta a documentação do Next ("Keep Proxy checks fast"). A abordagem escolhida está em aberto para a TASK-04b: lista de slugs publicados gerada no build ou consulta leve em cache. Nesta TASK-04, o proxy não muda.
+
+## Contratos complementares (definidos pelo orquestrador durante a TASK-04)
+
+- **`prisma/seed.ts`:**
+  - exporta `export async function seed(db: PrismaClient): Promise<void>`;
+  - só se executa sozinho quando chamado como script (`npm run db:seed`), detectando o módulo principal;
+  - quando importado pelos testes, não executa nada.
+- **Banco de teste:** usa a URL de `TEST_DATABASE_URL`, com padrão `postgresql://portfolio:portfolio@localhost:5434/portfolio_test?schema=public`. Os padrões de desenvolvimento do `docker-compose.yml` (usuário e senha `portfolio`, banco `portfolio`) precisam ser compatíveis com essa URL.
+- **Cliente gerado:** fica em `src/generated/prisma` (gerador `prisma-client`) e é importado pelo entrypoint `@/generated/prisma/client`.
+- **Testes de `src/server/**`:** usam `// @vitest-environment node`. O `server-only` é mockado nos testes unitários.
+- **Script:** `test:integration` = `vitest run -c vitest.integration.config.mts`.
