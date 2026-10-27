@@ -47,7 +47,7 @@ Opcional. O seed não roda automaticamente em produção. Para o site publicado 
    ```
 
    e cole a URL quando o PowerShell pedir. O que é digitado no `Read-Host` não vai para o histórico.
-4. A mensagem `Seed concluído: 4 categorias, 10 projetos, 30 mídias.` confirma a carga. Depois, faça **Redeploy** para o build gerar as páginas com os projetos.
+4. A mensagem `Seed concluído: 4 categorias, 10 projetos, 30 mídias.` confirma a carga. Depois, faça **Redeploy** (Deployments → **⋯** no deploy mais recente → **Redeploy**). Esse passo é obrigatório: a home e a lista de trabalhos são geradas no build e ficam em cache por dias, e um seed rodado por fora do site não invalida esse cache. Sem o redeploy, as páginas de projeto já abrem, mas a home continua mostrando "Nenhum trabalho publicado". A partir da TASK-07, o painel invalidará o cache sozinho a cada alteração.
 
 A variável definida no terminal tem prioridade: o `prisma.config.ts` carrega o `.env` com `process.loadEnvFile`, que não sobrescreve variáveis já definidas, e o `prisma/seed.ts` lê `DATABASE_URL` de `process.env`. O seed é idempotente (pode rodar de novo) e marca todos os projetos como demonstração.
 
