@@ -28,12 +28,15 @@ function demoImage(
   };
 }
 
-export const DEMO_HERO: ImageAsset = demoImage(
-  65,
-  { width: 2400, height: 1600 },
-  "Retrato em contraluz de uma mulher de cabelos longos em um campo — imagem de demonstração",
-  { author: "Alexander Shustov", sourceUrl: "https://unsplash.com/photos/2FrX56QL7P8" },
-);
+export const DEMO_HERO: ImageAsset = {
+  ...demoImage(
+    65,
+    { width: 2400, height: 1600 },
+    "Retrato em contraluz de uma mulher de cabelos longos em um campo — imagem de demonstração",
+    { author: "Alexander Shustov", sourceUrl: "https://unsplash.com/photos/2FrX56QL7P8" },
+  ),
+  isDemo: true,
+};
 
 /** Imagem de galeria: id Picsum, proporção, descrição neutra (sem o sufixo) e crédito. */
 interface DemoGalleryInput {

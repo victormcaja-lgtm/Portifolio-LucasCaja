@@ -24,6 +24,10 @@ describe("DEMO_HERO (contrato de módulo)", () => {
   it("tem alt, credit e src gerado por demoImageUrl", () => {
     expectValidDemoImage(DEMO_HERO);
   });
+
+  it("TASK-04b (ciclo 1): é marcado como demonstração (isDemo === true)", () => {
+    expect(DEMO_HERO.isDemo).toBe(true);
+  });
 });
 
 describe("DEMO_PROJECTS (contrato de módulo)", () => {

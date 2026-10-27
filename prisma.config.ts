@@ -17,6 +17,11 @@ export default defineConfig({
     // Lido de `process.env` (e não com `env()` de prisma/config, que lança quando falta):
     // `prisma generate` (postinstall, build da Vercel) não precisa de banco nem de DATABASE_URL.
     // Comandos que conectam (migrate, db seed, studio) falham com mensagem do próprio Prisma.
-    url: process.env.DATABASE_URL,
+    //
+    // A CLI (migrações) prefere DATABASE_URL_UNPOOLED, a conexão direta do Neon: o pooler
+    // (PgBouncer em modo transação) não suporta as travas e sessões que o `migrate` usa.
+    // Localmente ela não existe e vale DATABASE_URL. O cliente da aplicação (src/server/db.ts)
+    // continua usando DATABASE_URL, a conexão com pool.
+    url: process.env.DATABASE_URL_UNPOOLED?.trim() || process.env.DATABASE_URL,
   },
 });

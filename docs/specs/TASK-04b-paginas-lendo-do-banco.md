@@ -57,7 +57,7 @@ export function getHeroImage(): ImageAsset;                                 // D
 
 ### `/` (`src/app/page.tsx`)
 - Dados vêm de `getPublishedProjects()`; a imagem de abertura vem de `getHeroImage()`. Os créditos são calculados a partir desses dados, não mais de uma constante de módulo.
-- O `DemoNotice` aparece **somente se** algum projeto exibido tiver `isDemo = true` ou se a fonte for `"demo"`. Com o seed atual, continua aparecendo.
+- O `DemoNotice` aparece se algum projeto exibido tiver `isDemo = true`, se a fonte for `"demo"` **ou se a imagem de abertura for de demonstração**. Enquanto `getHeroImage()` devolver `DEMO_HERO` (até a TASK-07), o aviso aparece sempre, inclusive com o banco vazio. *(Ciclo de correção 1: a regra do CLAUDE.md exige marcar conteúdo provisório.)* Para isso, `ImageAsset` ganha `isDemo?: boolean` e `DEMO_HERO` passa a ter `isDemo: true`; a condição usa `hero.isDemo`.
 - **Estado vazio:** sem projetos publicados, a seção `#trabalhos` mostra o texto "Nenhum trabalho publicado no momento.", sem filtro nem contador e seguindo o design system (tipografia sans, `text-ink-muted`, espaço generoso). Não pode haver erro nem layout quebrado.
 
 ### `/trabalhos/[slug]`
@@ -133,3 +133,15 @@ Regras:
 6. `vercel-build` só migra em produção.
 7. Lint, typecheck, testes unitários (cobertura ≥ 80%), integração e E2E passam.
 8. Nenhum segredo nem valor de variável aparece em logs, mensagens de erro ou commits.
+
+## Pendências registradas (não bloqueantes)
+
+Sugestões dos revisores para tasks futuras:
+- **TASK-07:**
+  - invalidar `PROJECTS_TAG` e `projectTag(slug)` ao publicar ou editar. Um `null` de slug inexistente também fica em cache sob `project:<slug>`;
+  - permitir escolher o hero (com isso, o aviso de demonstração deixa de ser permanente);
+  - um backoff curto no slug guard quando o banco está fora do ar.
+- **DemoNotice:** uma variante de texto para quando só a foto de abertura for provisória.
+- **Âncora `/#trabalhos`:** `md:scroll-mt-20`, para alinhar com o header de 80 px.
+- **`tests/prisma-config.test.ts`:** um timeout maior, ou aquecer o import, para a CI com cache frio.
+- **Agentes:** não rodar builds simultâneos na mesma pasta `.next`.

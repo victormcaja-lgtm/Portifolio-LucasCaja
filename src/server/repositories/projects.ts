@@ -33,3 +33,13 @@ export async function listCategories(db: PrismaClient = getDb()): Promise<Catego
   });
   return rows.map((row) => ({ slug: row.slug as CategorySlug, name: row.name }));
 }
+
+/** Slugs dos projetos publicados (consulta leve, só a coluna `slug`), por `sortOrder`. */
+export async function listPublishedSlugs(db: PrismaClient = getDb()): Promise<string[]> {
+  const rows = await db.project.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    select: { slug: true },
+  });
+  return rows.map((row) => row.slug);
+}

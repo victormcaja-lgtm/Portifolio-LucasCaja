@@ -11,8 +11,9 @@ Passo a passo do que **você** precisa fazer nas contas externas. Nenhum segredo
 ### 1.1 Criar o projeto
 1. Entre em <https://vercel.com> com sua conta do GitHub.
 2. **Add New → Project**. Em *Import Git Repository*, autorize o acesso ao repositório `Portifolio-LucasCaja` e clique em **Import**.
-3. O framework (Next.js) é detectado sozinho. Não mexa em *Build Command* nem em *Output Directory*.
-4. Clique em **Deploy**. O site de demonstração deve publicar sem banco (o build não depende do Postgres nesta fase).
+3. O framework (Next.js) é detectado sozinho. Não mexa em *Build Command* nem em *Output Directory*: a Vercel usa sozinha o script `vercel-build` do `package.json`.
+4. Clique em **Deploy**. A partir da TASK-04b, o deploy de **Production** exige o banco (`DATABASE_URL`) e falha sem ele, de propósito: produção nunca publica o conteúdo de demonstração por falta de configuração. Se o primeiro deploy falhar por isso, crie o banco (passo 1.2) e use **Redeploy**.
+5. No log do primeiro deploy de **Production**, confira se aparece `prisma migrate deploy`. Se não aparecer, em **Settings → Build and Deployment**, defina o *Build Command* como `npm run vercel-build` e faça **Redeploy**.
 
 ### 1.2 Criar o Postgres
 O "Vercel Postgres" hoje é o **Neon**, oferecido pelo Marketplace da Vercel.
@@ -22,7 +23,35 @@ O "Vercel Postgres" hoje é o **Neon**, oferecido pelo Marketplace da Vercel.
 4. Conecte o banco ao projeto marcando os ambientes **Production** e **Preview**. Deixe **Development** desmarcado: localmente continuamos usando o Postgres do Docker.
 5. Em **Settings → Environment Variables**, confira que surgiram `DATABASE_URL` (conexão com pool) e `DATABASE_URL_UNPOOLED` (conexão direta, usada pelas migrações).
 
-Não copie essas URLs para o `.env` local. A criação das tabelas em produção (migrações) entra na TASK-04b.
+Não copie essas URLs para o `.env` local. As tabelas são criadas no deploy de **Production**: a Vercel executa `npm run vercel-build`, que roda `prisma migrate deploy` (pela `DATABASE_URL_UNPOOLED`) antes do `next build`. Deploys de **Preview** só fazem o build e nunca migram o banco: um preview que traga uma migração nova pode falhar até ela ser aplicada em produção. A alternativa é ativar no Neon os branches de banco por preview, para cada preview ter o próprio banco.
+
+Em produção, o build exige `DATABASE_URL`: sem ela, ele falha em vez de publicar o conteúdo de demonstração. Com o banco migrado e vazio, o site publica com a mensagem "Nenhum trabalho publicado no momento.".
+
+### 1.3 Carregar o conteúdo de demonstração no banco de produção
+Opcional. O seed não roda automaticamente em produção. Para o site publicado mostrar os projetos de demonstração enquanto o painel não existe:
+
+1. Faça um deploy de **Production** antes, para que as migrações criem as tabelas.
+2. Na Vercel, abra **Storage → seu banco** (ou **Settings → Environment Variables**) e copie o valor de `DATABASE_URL_UNPOOLED` (a conexão direta, sem pooler).
+3. Na pasta do projeto, no **PowerShell**, rode numa única linha (cole a URL entre as aspas):
+
+   ```powershell
+   $env:DATABASE_URL="<url>"; npm run db:seed; Remove-Item Env:DATABASE_URL
+   ```
+
+   No Git Bash, o equivalente é `DATABASE_URL="<url>" npm run db:seed`, que vale só para esse comando.
+
+   O PowerShell grava no histórico (PSReadLine) as linhas digitadas, inclusive a URL. Para evitar isso, peça o valor sem colocá-lo na linha de comando:
+
+   ```powershell
+   $env:DATABASE_URL = Read-Host "URL do banco"; npm run db:seed; Remove-Item Env:DATABASE_URL
+   ```
+
+   e cole a URL quando o PowerShell pedir. O que é digitado no `Read-Host` não vai para o histórico.
+4. A mensagem `Seed concluído: 4 categorias, 10 projetos, 30 mídias.` confirma a carga. Depois, faça **Redeploy** para o build gerar as páginas com os projetos.
+
+A variável definida no terminal tem prioridade: o `prisma.config.ts` carrega o `.env` com `process.loadEnvFile`, que não sobrescreve variáveis já definidas, e o `prisma/seed.ts` lê `DATABASE_URL` de `process.env`. O seed é idempotente (pode rodar de novo) e marca todos os projetos como demonstração.
+
+**Cuidado:** essa URL contém a senha do banco. Cole-a **somente** no próprio terminal: nunca no `.env`, em chat, issue, commit ou print de tela. Feche o terminal ao terminar (o `Remove-Item` já apaga a variável da sessão).
 
 ---
 

@@ -20,6 +20,8 @@ export interface ImageAsset {
   alt: string;
   /** Obrigatório em conteúdo de demonstração. */
   credit?: ImageCredit;
+  /** Marca a imagem como conteúdo de demonstração (ex.: imagem de abertura provisória). */
+  isDemo?: boolean;
 }
 
 export interface Project {

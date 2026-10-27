@@ -48,7 +48,7 @@ Documento vivo. Descreve o que **está planejado** e marca explicitamente o que 
 
 Princípios:
 - **Fotografia em primeiro lugar:** páginas públicas renderizadas no servidor, imagens com `sizes` corretos, pré-carregamento só do hero.
-- **Camada de dados isolada:** os componentes consomem tipos de domínio (`src/lib/types.ts`). Hoje os dados vêm de `src/content/demo.ts`; na etapa de banco, uma função de repositório passa a ler do Prisma sem mudar os componentes.
+- **Camada de dados isolada:** os componentes consomem tipos de domínio (`src/lib/types.ts`). As páginas leem por `src/server/content.ts`: do Postgres (Prisma, com `"use cache"` e tags) quando há `DATABASE_URL`, ou de `src/content/demo.ts` quando não há (build sem banco).
 - **Segredos só no servidor:** nada além de `NEXT_PUBLIC_*` chega ao navegador.
 
 ## 4. Estrutura de diretórios
@@ -76,7 +76,7 @@ src/
     site/                ✅ header, hero, grade editorial, card, filtro, rodapé, aviso demo
     ui/                  ✅ primitivas (Reveal)
     admin/               ⏳
-  content/               ✅ demo.ts — conteúdo de DEMONSTRAÇÃO (removido quando houver banco)
+  content/               ✅ demo.ts — conteúdo de DEMONSTRAÇÃO (fonte do seed, fallback sem banco e hero até a etapa 7)
   lib/                   ✅ funções puras e tipos de domínio
   server/                ✅ env.ts, db.ts, mappers.ts, repositories/ · ⏳ auth.ts, cloudinary.ts
   test/                  ✅ setup do Vitest
@@ -207,7 +207,7 @@ Cada etapa é pequena, testável e passa pelo fluxo Teste → Dev → Teste → 
 | 2 | Página de projeto (`/trabalhos/[slug]`) com dados demo | galeria vertical editorial, navegação anterior/próximo, 404 | ✅ concluída |
 | 3 | Testes E2E (Playwright) e auditoria de acessibilidade/performance | smoke desktop + mobile, axe | ✅ concluída |
 | 4 | Banco de dados: Docker Postgres + Prisma schema + migração + seed demo; repositório troca `content/demo.ts` por Prisma | `npm run db:migrate`, testes de repositório | ✅ concluída (as páginas ainda leem o conteúdo demo; a troca é a etapa 4b) |
-| 4b | Páginas públicas lendo do banco (estratégia de cache e do proxy de 404) | páginas servidas pelo Postgres, build sem banco continua possível | ⏳ |
+| 4b | Páginas públicas lendo do banco (estratégia de cache e do proxy de 404) | páginas servidas pelo Postgres, build sem banco continua possível | ✅ concluída (hero ainda demo até a etapa 7; pendências na spec) |
 | 5 | Autenticação: Better Auth, login, proteção do `/admin`, papéis | login/logout, acesso negado por papel | ⏳ |
 | 6 | Cloudinary: assinatura de upload, upload de foto/vídeo, metadados salvos em `Media` | upload real com credenciais do usuário | ⏳ |
 | 7 | Painel: CRUD de projetos, categorias, ordenação, publicação | fluxos completos no painel | ⏳ |

@@ -248,13 +248,45 @@ describe("TASK-04b: a home lê de @/server/content (CA-01)", () => {
 });
 
 describe("TASK-04b: DemoNotice condicional", () => {
-  it('fonte "database" com projetos isDemo=false → sem aviso de demonstração', async () => {
+  /** Hero real (sem `isDemo`), para isolar a regra dos projetos. */
+  const REAL_HERO = makeImage({ alt: "Imagem de abertura real (teste)" });
+  const DEMO_FLAGGED_HERO = makeImage({ alt: "Imagem de abertura demo (teste)", isDemo: true });
+
+  it('fonte "database" com projetos isDemo=false e hero sem isDemo → sem aviso de demonstração', async () => {
     useDatabaseSource();
+    content.getHeroImage.mockReturnValue(REAL_HERO);
     withProjects([makeProject({ isDemo: false }), makeProject({ isDemo: false })]);
     await renderHome();
 
     expect(screen.queryByRole("note")).toBeNull();
     expect(screen.queryByText("Conteúdo de demonstração")).toBeNull();
+  });
+
+  it('ciclo 1: fonte "database", projetos isDemo=false e hero isDemo=true → mostra o aviso', async () => {
+    useDatabaseSource();
+    content.getHeroImage.mockReturnValue(DEMO_FLAGGED_HERO);
+    withProjects([makeProject({ isDemo: false }), makeProject({ isDemo: false })]);
+    await renderHome();
+
+    expect(screen.getByRole("note")).toHaveTextContent("Conteúdo de demonstração");
+  });
+
+  it('ciclo 1: fonte "database", sem projetos e hero isDemo=true → mostra o aviso', async () => {
+    useDatabaseSource();
+    content.getHeroImage.mockReturnValue(DEMO_FLAGGED_HERO);
+    withProjects([]);
+    await renderHome();
+
+    expect(screen.getByRole("note")).toHaveTextContent("Conteúdo de demonstração");
+  });
+
+  it('ciclo 1: fonte "database", sem projetos e hero sem isDemo → sem aviso', async () => {
+    useDatabaseSource();
+    content.getHeroImage.mockReturnValue(REAL_HERO);
+    withProjects([]);
+    await renderHome();
+
+    expect(screen.queryByRole("note")).toBeNull();
   });
 
   it('fonte "database" com algum projeto isDemo=true → mostra o aviso', async () => {
@@ -281,12 +313,13 @@ describe("TASK-04b: DemoNotice condicional", () => {
     expect(screen.getByRole("note")).toHaveTextContent("Conteúdo de demonstração");
   });
 
-  it('fonte "database" sem projetos → sem aviso', async () => {
+  it('ciclo 1: fonte "database" sem projetos, com o hero padrão (DEMO_HERO) → mostra o aviso', async () => {
     useDatabaseSource();
+    content.getHeroImage.mockReturnValue(DEMO_HERO);
     withProjects([]);
     await renderHome();
 
-    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.getByRole("note")).toHaveTextContent("Conteúdo de demonstração");
   });
 });
 

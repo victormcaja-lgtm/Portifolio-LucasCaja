@@ -282,3 +282,58 @@ describe("TASK-04b: a página de projeto lê de @/server/content (CA-01/CA-04)",
     expect(notFoundMock).not.toHaveBeenCalled();
   });
 });
+
+describe("TASK-04b: vizinhos quando o projeto não está na lista publicada", () => {
+  it("projeto resolvido mas ausente de getPublishedProjects → renderiza sem anterior/próximo, sem lançar", async () => {
+    // Ex.: projeto publicado depois que a lista em cache foi gerada (tags diferentes).
+    const fresh = makeProject({ slug: "recem-publicado", title: "Recém-publicado", isDemo: false });
+    const others = [
+      makeProject({ slug: "outro-a", sortOrder: 1, isDemo: false }),
+      makeProject({ slug: "outro-b", sortOrder: 2, isDemo: false }),
+    ];
+    content.getPublishedProject.mockImplementation(async (slug: string) =>
+      slug === fresh.slug ? fresh : null,
+    );
+    content.getPublishedProjects.mockResolvedValue(others);
+
+    await renderPage(fresh.slug);
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Recém-publicado");
+    const nav = screen.getByRole("navigation", { name: "Outros trabalhos" });
+    const hrefs = within(nav)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    expect(hrefs).toEqual(["/#trabalhos"]);
+    expect(within(nav).queryByText("Anterior")).toBeNull();
+    expect(within(nav).queryByText("Próximo")).toBeNull();
+    expect(notFoundMock).not.toHaveBeenCalled();
+  });
+
+  it("lista publicada vazia → renderiza sem anterior/próximo", async () => {
+    const only = makeProject({ slug: "sozinho", title: "Sozinho", isDemo: false });
+    content.getPublishedProject.mockResolvedValue(only);
+    content.getPublishedProjects.mockResolvedValue([]);
+
+    await renderPage(only.slug);
+
+    const nav = screen.getByRole("navigation", { name: "Outros trabalhos" });
+    expect(within(nav).getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual([
+      "/#trabalhos",
+    ]);
+  });
+
+  it("único projeto publicado → sem anterior/próximo (não aponta para si mesmo)", async () => {
+    const only = makeProject({ slug: "unico", title: "Único", isDemo: false });
+    content.getPublishedProject.mockResolvedValue(only);
+    content.getPublishedProjects.mockResolvedValue([only]);
+
+    await renderPage(only.slug);
+
+    const nav = screen.getByRole("navigation", { name: "Outros trabalhos" });
+    const hrefs = within(nav)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    expect(hrefs).not.toContain("/trabalhos/unico");
+    expect(hrefs).toEqual(["/#trabalhos"]);
+  });
+});
