@@ -57,4 +57,4 @@ Cada task segue o fluxo **Teste → Dev → Teste → Revisor → UI/UX**, com n
 
 Nenhum segredo é versionado. O passo a passo para configurar a Vercel (projeto e Postgres/Neon), o segredo da autenticação e o Cloudinary está em [`docs/GUIA-CONFIGURACAO.md`](docs/GUIA-CONFIGURACAO.md).
 
-Nenhum segredo é versionado. Copie `.env.example` para `.env.local` e preencha somente quando a etapa correspondente for implementada. Na Vercel, configure as variáveis em *Project Settings → Environment Variables*.
+Copie `.env.example` para `.env` e preencha somente quando a etapa correspondente for implementada. Na Vercel, configure as variáveis em *Project Settings → Environment Variables*.
