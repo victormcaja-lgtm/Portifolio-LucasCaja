@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, type NextResponse } from "next/server";
 import {
   getRewrittenUrl,
   isRewrite,
@@ -34,6 +34,17 @@ vi.mock("@/server/slug-guard", async (importOriginal) => {
 });
 
 const ORIGIN = "https://exemplo.test";
+/**
+ * TASK-04c: destino do rewrite sem rota nem arquivo estático correspondente. Reescrever para
+ * /404 fazia a Vercel servir o 404.html estático com HTTP 200 (soft 404).
+ */
+const NOT_FOUND_TARGET = `${ORIGIN}/_nao-encontrado`;
+
+function expectNotFoundRewrite(response: NextResponse, label?: string) {
+  expect(isRewrite(response), label).toBe(true);
+  expect(getRewrittenUrl(response), label).toBe(NOT_FOUND_TARGET);
+  expect(response.status, label).toBe(404);
+}
 const DEMO_SLUGS = DEMO_PROJECTS.map((p) => p.slug);
 
 type ProxyModule = typeof import("./proxy");
@@ -71,6 +82,7 @@ describe("CA-12: proxy de 404 (src/proxy.ts)", () => {
       expect(response.headers.get("x-middleware-rewrite")).toBeNull();
       expect(isRewrite(response)).toBe(false);
       expect(getRewrittenUrl(response)).toBeNull();
+      expect(response.status).not.toBe(404);
     },
   );
 
@@ -78,19 +90,18 @@ describe("CA-12: proxy de 404 (src/proxy.ts)", () => {
     const response = await run("/trabalhos/estudo-i/");
     expect(isRewrite(response)).toBe(false);
     expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.status).not.toBe(404);
   });
 
-  it("CA-12: slug desconhecido é reescrito para /404", async () => {
+  it("CA-12 / TASK-04c CA-1: slug desconhecido é reescrito para /_nao-encontrado com status 404", async () => {
     const response = await run("/trabalhos/nao-existe");
-    expect(isRewrite(response)).toBe(true);
-    expect(getRewrittenUrl(response)).toBe(`${ORIGIN}/404`);
+    expectNotFoundRewrite(response);
     expect(response.headers.get("x-middleware-next")).toBeNull();
   });
 
-  it("CA-12: slug vazio (/trabalhos/) é reescrito para /404", async () => {
+  it("CA-12 / TASK-04c CA-1: slug vazio (/trabalhos/) é reescrito para /_nao-encontrado com status 404", async () => {
     const response = await run("/trabalhos/");
-    expect(isRewrite(response)).toBe(true);
-    expect(getRewrittenUrl(response)).toBe(`${ORIGIN}/404`);
+    expectNotFoundRewrite(response);
   });
 
   it("CA-12: o matcher cobre /trabalhos/<slug> e não outras rotas", () => {
@@ -122,27 +133,27 @@ describe("TASK-04b: proxy usa o slug guard com getPublishedSlugs (CA-01/CA-05)",
     const response = await run("/trabalhos/publicado-no-banco");
     expect(isRewrite(response)).toBe(false);
     expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.status).not.toBe(404);
   });
 
-  it("CA-01: um slug demo ausente da fonte de dados é reescrito para /404", async () => {
+  it("CA-01 / TASK-04c CA-1: um slug demo ausente da fonte de dados é reescrito para /_nao-encontrado com status 404", async () => {
     mocks.getPublishedSlugs.mockResolvedValue(["publicado-no-banco"]);
     const response = await run(`/trabalhos/${DEMO_SLUGS[0]}`);
-    expect(getRewrittenUrl(response)).toBe(`${ORIGIN}/404`);
+    expectNotFoundRewrite(response);
   });
 
-  it("CA-04: sem projetos publicados, qualquer /trabalhos/x é reescrito para /404", async () => {
+  it("CA-04 / TASK-04c CA-1: sem projetos publicados, qualquer /trabalhos/x é reescrito para /_nao-encontrado com status 404", async () => {
     mocks.getPublishedSlugs.mockResolvedValue([]);
     for (const path of ["/trabalhos/x", `/trabalhos/${DEMO_SLUGS[0]}`, "/trabalhos/__vazio__"]) {
       const response = await run(path);
-      expect(getRewrittenUrl(response), path).toBe(`${ORIGIN}/404`);
+      expectNotFoundRewrite(response, path);
     }
   });
 
-  it("CA-04: o slug reservado __vazio__ é tratado como inexistente", async () => {
+  it("CA-04 / TASK-04c CA-1: o slug reservado __vazio__ é tratado como inexistente (status 404)", async () => {
     mocks.getPublishedSlugs.mockResolvedValue(["__vazio__", ...DEMO_SLUGS]);
     const response = await run("/trabalhos/__vazio__");
-    expect(isRewrite(response)).toBe(true);
-    expect(getRewrittenUrl(response)).toBe(`${ORIGIN}/404`);
+    expectNotFoundRewrite(response);
   });
 
   it("CA-05: várias requisições dentro de 60 s consultam a fonte uma única vez", async () => {
@@ -167,12 +178,14 @@ describe('TASK-04b: proxy com lista indisponível ("unknown") — fail open', ()
     const response = await run(`/trabalhos/${DEMO_SLUGS[0]}`);
     expect(isRewrite(response)).toBe(false);
     expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.status).not.toBe(404);
   });
 
   it('"unknown" → mesmo um slug inexistente segue adiante (sem 404 em massa)', async () => {
     const response = await run("/trabalhos/nao-existe");
     expect(isRewrite(response)).toBe(false);
     expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.status).not.toBe(404);
   });
 
   it("a falha do banco não derruba o proxy (não lança)", async () => {
