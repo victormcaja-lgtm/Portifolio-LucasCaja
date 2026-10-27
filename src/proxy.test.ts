@@ -1,5 +1,6 @@
 import { NextRequest, type NextResponse } from "next/server";
 import {
+  getRedirectUrl,
   getRewrittenUrl,
   isRewrite,
   unstable_doesMiddlewareMatch,
@@ -56,8 +57,9 @@ async function loadProxy(): Promise<ProxyModule> {
   return import("./proxy");
 }
 
-async function run(pathname: string) {
-  return proxyModule.proxy(new NextRequest(`${ORIGIN}${pathname}`));
+async function run(pathname: string, cookie?: string) {
+  const init = cookie ? { headers: { cookie } } : undefined;
+  return proxyModule.proxy(new NextRequest(`${ORIGIN}${pathname}`, init));
 }
 
 beforeEach(async () => {
@@ -190,5 +192,97 @@ describe('TASK-04b: proxy com lista indisponível ("unknown") — fail open', ()
 
   it("a falha do banco não derruba o proxy (não lança)", async () => {
     await expect(run("/trabalhos/qualquer")).resolves.toBeDefined();
+  });
+});
+
+/**
+ * TASK-05: o proxy também protege /admin/* com uma checagem OTIMISTA: sem o cookie de sessão do
+ * Better Auth (`getSessionCookie`), redireciona para /admin/entrar?next=<caminho>. A validação
+ * real da sessão fica no servidor (`requireUser`). /admin/entrar e /admin/definir-senha ficam
+ * de fora. O cookie usado aqui é o nome padrão do Better Auth (`better-auth.session_token`).
+ */
+const SESSION_COOKIE = "better-auth.session_token=token-assinado.abc";
+const SECURE_SESSION_COOKIE = "__Secure-better-auth.session_token=token-assinado.abc";
+
+function expectLoginRedirect(response: NextResponse, next: string) {
+  const location = getRedirectUrl(response);
+  expect(location, `redirect esperado para o login (next=${next})`).not.toBeNull();
+  expect([307, 308, 302, 303]).toContain(response.status);
+  const url = new URL(location as string);
+  expect(url.origin).toBe(ORIGIN);
+  expect(url.pathname).toBe("/admin/entrar");
+  expect(url.searchParams.get("next")).toBe(next);
+}
+
+function expectPassThrough(response: NextResponse) {
+  expect(getRedirectUrl(response)).toBeNull();
+  expect(isRewrite(response)).toBe(false);
+  expect(response.headers.get("x-middleware-next")).toBe("1");
+}
+
+describe("TASK-05: proxy em /admin (checagem otimista do cookie de sessão)", () => {
+  it("CA-3: /admin sem cookie → redirect para /admin/entrar?next=/admin", async () => {
+    expectLoginRedirect(await run("/admin"), "/admin");
+  });
+
+  it("CA-3: subcaminho sem cookie → next preserva o caminho", async () => {
+    expectLoginRedirect(await run("/admin/projetos/novo"), "/admin/projetos/novo");
+  });
+
+  it("um cookie qualquer (não de sessão) não basta", async () => {
+    expectLoginRedirect(await run("/admin", "outro=1; tema=escuro"), "/admin");
+  });
+
+  it("/admin com o cookie de sessão segue adiante (validação real no servidor)", async () => {
+    expectPassThrough(await run("/admin", SESSION_COOKIE));
+  });
+
+  it("subcaminho com o cookie de sessão segue adiante", async () => {
+    expectPassThrough(await run("/admin/projetos", `tema=escuro; ${SESSION_COOKIE}`));
+  });
+
+  it("aceita o cookie com prefixo __Secure- (produção em https)", async () => {
+    expectPassThrough(await run("/admin", SECURE_SESSION_COOKIE));
+  });
+
+  it.each(["/admin/entrar", "/admin/entrar/", "/admin/definir-senha", "/admin/definir-senha?token=abc"])(
+    "exceção: %s sem cookie segue adiante (sem redirect)",
+    async (path) => {
+      expectPassThrough(await run(path));
+    },
+  );
+
+  it("exceção: /admin/entrar com cookie também segue adiante (a página decide)", async () => {
+    expectPassThrough(await run("/admin/entrar", SESSION_COOKIE));
+  });
+
+  it("/admin não consulta a lista de slugs publicados", async () => {
+    await run("/admin");
+    await run("/admin/projetos", SESSION_COOKIE);
+    expect(mocks.getPublishedSlugs).not.toHaveBeenCalled();
+  });
+
+  it("o matcher inclui /admin/:path* e mantém /trabalhos/:slug", () => {
+    const { config } = proxyModule;
+    for (const url of [
+      "/admin",
+      "/admin/projetos",
+      "/admin/projetos/novo",
+      "/admin/entrar",
+      "/admin/definir-senha",
+      "/trabalhos/estudo-i",
+    ]) {
+      expect(unstable_doesMiddlewareMatch({ config, url }), url).toBe(true);
+    }
+    for (const url of ["/", "/sobre", "/administrar", "/api/auth/get-session"]) {
+      expect(unstable_doesMiddlewareMatch({ config, url }), url).toBe(false);
+    }
+  });
+
+  it("/trabalhos/:slug continua igual com cookie de sessão presente", async () => {
+    const known = await run(`/trabalhos/${DEMO_SLUGS[0]}`, SESSION_COOKIE);
+    expect(isRewrite(known)).toBe(false);
+    expect(getRedirectUrl(known)).toBeNull();
+    expectNotFoundRewrite(await run("/trabalhos/nao-existe", SESSION_COOKIE));
   });
 });
