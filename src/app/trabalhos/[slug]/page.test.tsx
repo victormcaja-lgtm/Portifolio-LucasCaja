@@ -5,7 +5,8 @@ import ProjectPage, { generateMetadata, generateStaticParams } from "@/app/traba
 import { DEMO_PROJECTS } from "@/content/demo";
 import { collectImageCredits } from "@/lib/credits";
 import { buildProjectMetadata } from "@/lib/metadata";
-import { getAdjacentProjects, sortProjects } from "@/lib/projects";
+import { getAdjacentProjects, getProjectBySlug, sortProjects } from "@/lib/projects";
+import { makeProject } from "@/test/fixtures";
 
 /**
  * `notFound()` do Next lança um erro especial que interrompe a renderização.
@@ -22,6 +23,21 @@ vi.mock("next/navigation", async (importOriginal) => {
   return { ...actual, notFound: notFoundMock };
 });
 
+/**
+ * TASK-04b: a página lê de `@/server/content` (mockado). Por padrão, o mock devolve os dados
+ * demo, que servem de fixture.
+ */
+const content = vi.hoisted(() => ({
+  getPublishedProjects: vi.fn(),
+  getPublishedProject: vi.fn(),
+  getPublishedSlugs: vi.fn(),
+  getHeroImage: vi.fn(),
+}));
+
+vi.mock("@/server/content", () => content);
+
+/** Parâmetro reservado devolvido por generateStaticParams quando não há slugs. */
+const RESERVED_SLUG = "__vazio__";
 
 /**
  * Hipótese: a página é um Server Component async que só usa `await params` e funções puras
@@ -47,6 +63,12 @@ async function renderPage(slug: string) {
 
 beforeEach(() => {
   notFoundMock.mockClear();
+  for (const fn of Object.values(content)) fn.mockReset();
+  content.getPublishedProjects.mockImplementation(async () => sortProjects(DEMO_PROJECTS));
+  content.getPublishedProject.mockImplementation(
+    async (slug: string) => getProjectBySlug(DEMO_PROJECTS, slug) ?? null,
+  );
+  content.getPublishedSlugs.mockImplementation(async () => DEMO_PROJECTS.map((p) => p.slug));
 });
 
 describe("Rota /trabalhos/[slug] — CA-05 geração estática", () => {
@@ -163,5 +185,100 @@ describe("Rota /trabalhos/[slug] — composição da página", () => {
       expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(project.title);
       unmount();
     }
+  });
+});
+
+describe("TASK-04b: generateStaticParams lê de getPublishedSlugs (CA-01/CA-04)", () => {
+  it("CA-01: devolve um parâmetro por slug de getPublishedSlugs", async () => {
+    content.getPublishedSlugs.mockResolvedValue(["do-banco-a", "do-banco-b"]);
+    const result = await getStaticParams();
+    expect(content.getPublishedSlugs).toHaveBeenCalled();
+    expect(result).toEqual([{ slug: "do-banco-a" }, { slug: "do-banco-b" }]);
+  });
+
+  it("CA-04: com zero slugs, devolve um único parâmetro reservado (__vazio__), nunca lista vazia", async () => {
+    content.getPublishedSlugs.mockResolvedValue([]);
+    const result = await getStaticParams();
+    expect(result).toEqual([{ slug: RESERVED_SLUG }]);
+  });
+
+  it("com slugs publicados, o parâmetro reservado não aparece", async () => {
+    const result = await getStaticParams();
+    expect(result.map((p) => p.slug)).not.toContain(RESERVED_SLUG);
+  });
+
+  it("CA-03: erro ao listar slugs propaga (o build falha)", async () => {
+    content.getPublishedSlugs.mockRejectedValue(new Error("banco inacessível"));
+    await expect(Promise.resolve().then(() => getStaticParams())).rejects.toThrow(
+      "banco inacessível",
+    );
+  });
+});
+
+describe("TASK-04b: a página de projeto lê de @/server/content (CA-01/CA-04)", () => {
+  it("CA-04: o slug reservado __vazio__ responde com notFound()", async () => {
+    content.getPublishedSlugs.mockResolvedValue([]);
+    content.getPublishedProjects.mockResolvedValue([]);
+    content.getPublishedProject.mockResolvedValue(null);
+    await expect(Page(params(RESERVED_SLUG))).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(notFoundMock).toHaveBeenCalled();
+  });
+
+  it("CA-04: generateMetadata com o slug reservado também chama notFound()", async () => {
+    content.getPublishedProject.mockResolvedValue(null);
+    await expect(getMetadata(params(RESERVED_SLUG))).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("CA-04: __vazio__ responde 404 mesmo que a fonte devolvesse algo para ele", async () => {
+    content.getPublishedProject.mockResolvedValue(makeProject({ slug: RESERVED_SLUG }));
+    await expect(Page(params(RESERVED_SLUG))).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("CA-01: resolve o projeto com getPublishedProject(slug)", async () => {
+    const project = makeProject({ slug: "so-no-banco", title: "Só no Banco", isDemo: false });
+    const other = makeProject({ slug: "vizinho", title: "Vizinho", isDemo: false });
+    content.getPublishedProject.mockImplementation(async (slug: string) =>
+      slug === project.slug ? project : null,
+    );
+    content.getPublishedProjects.mockResolvedValue(sortProjects([project, other]));
+
+    await renderPage("so-no-banco");
+
+    expect(content.getPublishedProject).toHaveBeenCalledWith("so-no-banco");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Só no Banco");
+    expect(notFoundMock).not.toHaveBeenCalled();
+  });
+
+  it("CA-01: projeto ausente da fonte → notFound(), mesmo que exista no demo", async () => {
+    content.getPublishedProject.mockResolvedValue(null);
+    await expect(Page(params(target.slug))).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("CA-01: anterior/próximo vêm de getPublishedProjects com getAdjacentProjects", async () => {
+    const a = makeProject({ slug: "a-banco", title: "A do banco", sortOrder: 1, isDemo: false });
+    const b = makeProject({ slug: "b-banco", title: "B do banco", sortOrder: 2, isDemo: false });
+    const c = makeProject({ slug: "c-banco", title: "C do banco", sortOrder: 3, isDemo: false });
+    const all = [a, b, c];
+    content.getPublishedProjects.mockResolvedValue(all);
+    content.getPublishedProject.mockImplementation(
+      async (slug: string) => all.find((p) => p.slug === slug) ?? null,
+    );
+
+    await renderPage("b-banco");
+
+    expect(content.getPublishedProjects).toHaveBeenCalled();
+    const nav = screen.getByRole("navigation", { name: "Outros trabalhos" });
+    const hrefs = within(nav)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href"));
+    expect(hrefs).toContain("/trabalhos/a-banco");
+    expect(hrefs).toContain("/trabalhos/c-banco");
+    for (const p of DEMO_PROJECTS) expect(hrefs).not.toContain(`/trabalhos/${p.slug}`);
+  });
+
+  it("CA-03: erro da fonte de dados propaga (sem fallback para o demo)", async () => {
+    content.getPublishedProject.mockRejectedValue(new Error("banco inacessível"));
+    await expect(Page(params(target.slug))).rejects.toThrow("banco inacessível");
+    expect(notFoundMock).not.toHaveBeenCalled();
   });
 });
