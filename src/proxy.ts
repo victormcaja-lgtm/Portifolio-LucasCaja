@@ -20,8 +20,12 @@ const guard = createSlugGuard({ load: getPublishedSlugs, ttlMs: 60_000 });
 
 const PREFIX = "/trabalhos/";
 
-/** Caminho sem rota correspondente: renderiza o not-found da raiz. */
-const NOT_FOUND_PATH = "/404";
+/**
+ * Caminho sem rota e sem arquivo estático correspondente: renderiza o not-found da raiz com
+ * status 404. Não usar "/404": na Vercel esse caminho corresponde ao 404.html estático gerado no
+ * build e é servido como rota comum, com HTTP 200 (soft 404). TASK-04c.
+ */
+const NOT_FOUND_PATH = "/_nao-encontrado";
 
 export async function proxy(request: NextRequest) {
   const slug = request.nextUrl.pathname.slice(PREFIX.length).replace(/\/$/, "");
@@ -29,7 +33,8 @@ export async function proxy(request: NextRequest) {
   // "unknown" (lista indisponível, por exemplo banco fora do ar): fail open. A requisição segue
   // e a página decide com notFound(). Um erro de banco não deve virar 404 em massa.
   if (known === true || known === "unknown") return NextResponse.next();
-  return NextResponse.rewrite(new URL(NOT_FOUND_PATH, request.url));
+  // status 404 explícito no init do rewrite (MiddlewareResponseInit), como garantia extra.
+  return NextResponse.rewrite(new URL(NOT_FOUND_PATH, request.url), { status: 404 });
 }
 
 export const config = {
