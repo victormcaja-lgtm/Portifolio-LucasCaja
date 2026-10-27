@@ -111,7 +111,8 @@ Com Cache Components, leituras de sessão (`headers()`) são dinâmicas. Coloque
 - **Lê do ambiente:**
   - `SEED_OWNER_EMAIL` e `SEED_OWNER_NAME`, obrigatórias;
   - `DATABASE_URL`;
-  - as variáveis de `getAuthEnv`.
+  - `BETTER_AUTH_URL` (ou `VERCEL_URL`), para montar o link.
+  - **Não exige `BETTER_AUTH_SECRET`** *(ciclo 1)*: o token de redefinição é aleatório e conferido no banco, e o script não cria sessão. Se o Better Auth exigir um segredo para inicializar, o script usa um valor efêmero gerado em memória, que nunca é impresso nem gravado. Na produção, o usuário não precisa copiar o segredo real.
 - Cria o usuário com papel `OWNER` se ele não existir. Se existir, garante o papel `OWNER` e `banned = false`. Nunca rebaixa ninguém nem altera outros usuários.
 - Gera, pelo fluxo de redefinição de senha do Better Auth com o sink do script, um link de uso único para `<baseURL>/admin/definir-senha?token=…`, válido por **60 minutos**, e **imprime só esse link** com um aviso: "não compartilhe; expira em 60 min; uso único".
 - **Funciona também em produção:** o usuário roda localmente com as variáveis do ambiente de produção, como no seed. Documente isso no guia.
@@ -158,3 +159,38 @@ Com Cache Components, leituras de sessão (`headers()`) são dinâmicas. Coloque
 7. Build sem variáveis de autenticação passa; as páginas públicas não mudam.
 8. Nenhum segredo, token ou hash em logs, mensagens de erro, commits ou artefatos de teste.
 9. Lint, typecheck, unitários (≥ 80%), integração e E2E passam.
+
+## Ciclo de correção 2
+
+Origem: o ui-ux reprovou por um bloqueante, e o revisor aprovou com sugestões de segurança, das quais algumas foram aceitas.
+
+**Interface**
+1. **Foco visível no botão primário.** `PRIMARY_BUTTON` (em `src/components/admin/form-styles.ts`) ganha `focus-visible:outline-ink`. O contorno herdava `currentColor` (`paper`) e ficava invisível sobre o fundo. *(Bloqueante.)*
+2. **Validação própria em `SetPasswordForm`.** O `<form>` recebe `noValidate`. Senha curta, longa ou diferente da confirmação mostra a mensagem do design system com `role="alert"`, nunca o balão nativo do navegador. Os atributos `minLength` e `maxLength` podem ficar, pois servem de dica para leitores de tela.
+3. **"Saindo…" no botão de sair.** Durante o envio, o `SignOutButton` mostra "Saindo…", coerente com "Entrando…" e "Salvando…".
+4. **`/admin` com `h1` estático.** O rótulo "Painel" e um `h1` estático ("Painel") ficam fora do `<Suspense>`. A saudação "Olá, {nome}" passa a ser um parágrafo de destaque dentro do Suspense. Assim, a página nunca fica sem `h1` durante o streaming.
+
+**Segurança**
+
+5. **Endpoint de redefinição desativado no app.** A instância do app usa `disabledPaths: ["/request-password-reset"]` (o caminho exato da versão instalada). Sem isso, o endpoint revela quais e-mails existem e deixa tokens órfãos. O script continua funcionando, porque chama `auth.api` diretamente, sem passar pelo handler HTTP. `/reset-password` (consumo do token) continua ativo.
+6. **Sessões revogadas ao redefinir a senha:** `revokeSessionsOnPasswordReset: true`.
+7. **IP do cliente na Vercel:** `advanced.ipAddress.ipAddressHeaders: ["x-vercel-forwarded-for", "x-forwarded-for"]`. Garante o rate limit por IP, sem um bucket compartilhado.
+
+**Testes e documentação**
+
+8. **E2E sempre com o segredo de teste.** O servidor do E2E usa sempre `E2E_AUTH_SECRET`, nunca `process.env.BETTER_AUTH_SECRET`.
+9. **Testes de integração do script:**
+   - um link novo invalida os anteriores do mesmo OWNER;
+   - tokens de outros usuários não são apagados.
+10. **Documentação da renovação de sessão.** Uma nota em `docs/ARQUITETURA.md` (feita pelo orquestrador) registra que a renovação diária vale só no banco. O cookie expira 7 dias após o login, então o administrador precisa entrar de novo a cada semana. Isso foi aceito.
+
+## Pendências registradas (não bloqueantes)
+
+- **Rótulo em `/admin`:** trocar o rótulo "Painel", que repete o `h1`, por "Área administrativa" (recomendação do ui-ux).
+- **Campos com erro:** marcar os campos com `aria-invalid` e destaque visual.
+- **Rate limit sem IP:** quando o IP não for resolvido, usar uma regra mais folgada, para não haver um bucket global de 5 tentativas. Avaliar também um limite por conta.
+- **Logs da Vercel:** depois do deploy, confirmar que o aviso "Rate limiting could not determine a client IP" não aparece.
+- **Constantes de senha:** mover `MIN_LENGTH` e `MAX_LENGTH` para `src/lib`, compartilhadas entre cliente e servidor.
+- **Token no fragmento:** levar o token do link de senha no fragmento (`#token=`) em vez da query string, já pensando na TASK-08.
+- **`requireRole`:** na TASK-07 e na TASK-08, não envolver em `try/catch` (ou usar `unstable_rethrow`).
+- **Renovação do cookie de sessão:** hoje o cookie expira 7 dias após o login (aceito). Uma chamada a `authClient.getSession()` no admin passaria a renová-lo.

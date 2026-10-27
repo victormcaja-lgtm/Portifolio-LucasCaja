@@ -9,8 +9,9 @@ const BASE_URL = `http://localhost:${PORT}`;
  * Dois projetos: desktop (Chromium 1440×900) e mobile (Chromium com o dispositivo Pixel 7).
  *
  * TASK-05: o global setup cria/atualiza o OWNER de teste no banco local. O servidor recebe
- * variáveis SÓ de teste: BETTER_AUTH_URL = a URL do E2E, um BETTER_AUTH_SECRET de teste quando
- * ausente no ambiente (o .env não é lido aqui) e o mesmo DATABASE_URL local do global setup.
+ * variáveis SÓ de teste: BETTER_AUTH_URL = a URL do E2E, sempre o BETTER_AUTH_SECRET de teste
+ * (E2E_AUTH_SECRET, mesmo que o ambiente defina outro; o .env não é lido aqui) e o mesmo
+ * DATABASE_URL local do global setup.
  */
 export default defineConfig({
   testDir: "tests/e2e",
@@ -46,7 +47,8 @@ export default defineConfig({
     stderr: "pipe",
     env: {
       BETTER_AUTH_URL: BASE_URL,
-      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET || E2E_AUTH_SECRET,
+      // Sempre o segredo de teste (ciclo 2, item 8): nunca o BETTER_AUTH_SECRET do ambiente.
+      BETTER_AUTH_SECRET: E2E_AUTH_SECRET,
       DATABASE_URL: E2E_DATABASE_URL,
     },
   },

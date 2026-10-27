@@ -31,6 +31,18 @@ npm run dev                    # http://localhost:3000
 
 As páginas são geradas no build (Cache Components, `"use cache"` com as tags `projects` e `project:<slug>`). Um projeto publicado depois do build é renderizado na primeira visita; o proxy de 404 guarda a lista de slugs em memória por 60 s.
 
+### Área administrativa (`/admin`)
+
+Login por e-mail e senha (Better Auth), sem cadastro público. Para entrar localmente, preencha no `.env` as variáveis da Etapa 5 (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `SEED_OWNER_EMAIL`, `SEED_OWNER_NAME`) e rode:
+
+```bash
+npm run auth:owner             # cria (ou promove) o OWNER e imprime um link para definir a senha
+```
+
+O comando imprime **só** um link `<BETTER_AUTH_URL>/admin/definir-senha?token=…`, de uso único e válido por 60 minutos. Abra-o no navegador, defina a senha (mínimo de 12 caracteres) e entre em `/admin/entrar`. Ninguém digita senha no terminal; rodar de novo gera um link novo e não cria outro usuário. Não compartilhe o link. O script só precisa de `DATABASE_URL`, `BETTER_AUTH_URL` (ou `VERCEL_URL`) e `SEED_OWNER_*`; o `BETTER_AUTH_SECRET` é usado pelo site no login, não pelo script. Para criar o OWNER em produção (rodando localmente com as variáveis de produção), siga o [guia de configuração](docs/GUIA-CONFIGURACAO.md#3-primeiro-acesso-do-administrador).
+
+O site público não depende das variáveis de autenticação: sem elas, o build passa e só o `/admin` fica indisponível.
+
 Build de produção local:
 
 ```bash
@@ -51,7 +63,7 @@ npm run start
 
 Na primeira execução do E2E, instale o navegador com `npx playwright install chromium`.
 
-**Pré-requisito do E2E:** o build lê o banco definido em `DATABASE_URL` (no `.env`). Antes de `npm run test:e2e`, deixe o banco local migrado e com seed:
+**Pré-requisito do E2E:** o build lê o banco definido em `DATABASE_URL` (no `.env`), e o *global setup* cria no banco local `portfolio` um OWNER só de teste (`e2e-owner@exemplo.test`), o que exige as migrações de autenticação. Antes de `npm run test:e2e`, deixe o banco local migrado e com seed:
 
 ```bash
 npm run db:up && npm run db:deploy && npm run db:seed
@@ -74,14 +86,14 @@ No PowerShell, o valor é um espaço, não `""`: atribuir `""` apaga a variável
 ## Estrutura
 
 ```
-src/app/            rotas (/, /trabalhos/[slug], 404)
-src/components/     componentes do site (site/) e primitivas (ui/)
+src/app/            rotas (/, /trabalhos/[slug], 404, /admin, /api/auth)
+src/components/     componentes do site (site/), do admin (admin/) e primitivas (ui/)
 src/content/demo.ts conteúdo de DEMONSTRAÇÃO (fonte sem banco e base do seed)
 src/lib/            tipos de domínio e funções puras
-src/server/         banco (Prisma), repositórios e camada de conteúdo das páginas
-src/proxy.ts        404 real para slugs inexistentes
+src/server/         banco (Prisma), repositórios, conteúdo das páginas e autenticação (auth, authz)
+src/proxy.ts        404 real para slugs inexistentes e checagem otimista da sessão no /admin
 prisma/             schema, migrações e seed de demonstração
-scripts/            vercel-build.ts (migra só em produção)
+scripts/            vercel-build.ts (migra só em produção) e owner-invite.ts (npm run auth:owner)
 docs/               arquitetura, design system, processo e specs
 .claude/agents/     agentes Dev, Teste, Revisor e UI/UX
 ```

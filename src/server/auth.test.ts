@@ -159,6 +159,26 @@ describe("getAuth — opções do Better Auth", () => {
     expect(rule.max).toBeLessThanOrEqual(5);
   });
 
+  it("ciclo 2, item 5: a instância do app desativa /request-password-reset (disabledPaths)", async () => {
+    const { options } = await loadOptions();
+    expect(options.disabledPaths).toEqual(expect.arrayContaining(["/request-password-reset"]));
+    // O consumo do token continua ativo.
+    expect(options.disabledPaths).not.toContain("/reset-password");
+  });
+
+  it("ciclo 2, item 6: redefinir a senha revoga as sessões existentes", async () => {
+    const { options } = await loadOptions();
+    expect(options.emailAndPassword.revokeSessionsOnPasswordReset).toBe(true);
+  });
+
+  it("ciclo 2, item 7: IP do cliente lido de x-vercel-forwarded-for e x-forwarded-for", async () => {
+    const { options } = await loadOptions();
+    expect(options.advanced?.ipAddress?.ipAddressHeaders).toEqual([
+      "x-vercel-forwarded-for",
+      "x-forwarded-for",
+    ]);
+  });
+
   it("sessão expira em 7 dias e é renovada diariamente", async () => {
     const { options } = await loadOptions();
     expect(options.session).toMatchObject({

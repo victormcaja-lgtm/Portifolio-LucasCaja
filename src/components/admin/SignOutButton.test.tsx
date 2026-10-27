@@ -66,6 +66,43 @@ describe("SignOutButton", () => {
     await waitFor(() => expect(navigations()).toContain("/admin/entrar"));
   });
 
+  it.each([
+    ["o servidor devolve erro", () => auth.signOut.mockResolvedValue({ data: null, error: { status: 500 } })],
+    ["a rede falha", () => auth.signOut.mockRejectedValue(new TypeError("Failed to fetch"))],
+  ])(
+    "quando %s → não navega, mostra alerta e reabilita o botão para tentar de novo",
+    async (_label, arrange) => {
+      arrange();
+      render(<SignOutButton />);
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Sair" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(/não foi possível sair/i);
+      expect(navigations()).toEqual([]);
+      expect(screen.getByRole("button", { name: "Sair" })).toBeEnabled();
+      expect(document.body).not.toHaveTextContent("Failed to fetch");
+
+      auth.signOut.mockReset();
+      auth.signOut.mockResolvedValue({ data: { success: true }, error: null });
+      await user.click(screen.getByRole("button", { name: "Sair" }));
+      expect(auth.signOut).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(navigations()).toContain("/admin/entrar"));
+    },
+  );
+
+  it('ciclo 2, item 3: mostra "Saindo…" durante o envio e volta a "Sair" se falhar', async () => {
+    const pending = deferred<unknown>();
+    auth.signOut.mockReturnValue(pending.promise);
+    render(<SignOutButton />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Sair" }));
+    expect(screen.getByRole("button", { name: "Saindo…" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Sair" })).not.toBeInTheDocument();
+    await act(async () => {
+      pending.resolve({ data: null, error: { status: 500 } });
+    });
+    expect(screen.getByRole("button", { name: "Sair" })).toBeEnabled();
+  });
+
   it("navega só depois que o signOut termina e fica desabilitado enquanto isso", async () => {
     const pending = deferred<unknown>();
     auth.signOut.mockReturnValue(pending.promise);

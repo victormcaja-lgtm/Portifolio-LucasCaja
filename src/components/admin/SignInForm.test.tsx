@@ -105,6 +105,12 @@ describe("SignInForm — campos e acessibilidade", () => {
     expect(button).toBeEnabled();
   });
 
+  it('ciclo 2, item 1: o botão "Entrar" tem foco visível com contorno em ink', () => {
+    render(<SignInForm />);
+    const button = screen.getByRole("button", { name: "Entrar" });
+    expect(button.className.split(/\s+/)).toContain("focus-visible:outline-ink");
+  });
+
   it("sem erro, não há mensagem de alerta", () => {
     render(<SignInForm />);
     expectNoAlertText();

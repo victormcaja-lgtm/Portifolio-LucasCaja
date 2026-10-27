@@ -53,9 +53,10 @@ describe("TASK-05: migração de autenticação", () => {
   it("Session.token é único", async () => {
     const rows = await db.$queryRaw<{ indexdef: string }[]>`
       SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'Session'`;
-    expect(rows.some((r) => /UNIQUE/i.test(r.indexdef) && /\("token"\)/.test(r.indexdef))).toBe(
-      true,
-    );
+    // O PostgreSQL só põe aspas em identificadores que precisam delas: `(token)` ou `("token")`.
+    expect(
+      rows.some((r) => /UNIQUE/i.test(r.indexdef) && /\(\s*"?token"?\s*\)/.test(r.indexdef)),
+    ).toBe(true);
   });
 
   it("Account tem accountId, providerId, password e userId", async () => {

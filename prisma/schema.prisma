@@ -33,6 +33,11 @@ enum MediaProvider {
   EXTERNAL
 }
 
+// Better Auth (TASK-05): as colunas de User já seguem o schema do Better Auth (name, email único,
+// emailVerified, image, createdAt, updatedAt); nenhuma coluna muda. `role` e `banned` entram
+// como additionalFields com input: false (src/server/auth-options.ts), para o usuário não poder
+// alterá-los. O id mantém @default(cuid()) para inserts feitos pelo Prisma (seed, script do
+// OWNER); o Better Auth gera os próprios ids. `sessions` e `accounts` são só relações do client.
 model User {
   id            String    @id @default(cuid())
   name          String
@@ -45,6 +50,66 @@ model User {
   updatedAt     DateTime  @updatedAt
   projects      Project[] @relation("ProjectAuthor")
   media         Media[]   @relation("MediaUploader")
+  sessions      Session[]
+  accounts      Account[]
+}
+
+/// Sessão do Better Auth. O cookie httpOnly leva o token assinado; o banco guarda o token.
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// Conta de login do Better Auth. E-mail e senha: providerId = "credential", accountId = id do
+/// usuário e `password` com o hash (nunca o texto puro). Os tokens OAuth ficam sem uso por ora.
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+/// Valores de verificação do Better Auth, de uso único e com expiração
+/// (ex.: identifier `reset-password:<token>`, value = id do usuário).
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+/// Contadores do rate limit do Better Auth (`rateLimit.storage: "database"`): chave (IP + caminho),
+/// requisições na janela e o instante da última requisição (ms desde a época, por isso BigInt).
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
 }
 
 model Category {

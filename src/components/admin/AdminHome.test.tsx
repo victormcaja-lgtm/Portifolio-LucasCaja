@@ -18,9 +18,16 @@ vi.mock("next/navigation", async (importOriginal) => {
 });
 
 describe("AdminHome", () => {
-  it('CA-3: título "Olá, {nome}"', () => {
+  it('CA-3 / ciclo 2, item 4: saudação "Olá, {nome}" como parágrafo de destaque, não como título', () => {
     render(<AdminHome name="Ana Teste" role="OWNER" />);
-    expect(screen.getByRole("heading", { level: 1, name: "Olá, Ana Teste" })).toBeInTheDocument();
+    const greeting = screen.getByText("Olá, Ana Teste");
+    expect(greeting.tagName).toBe("P");
+    expect(screen.queryByRole("heading", { name: /Olá/ })).not.toBeInTheDocument();
+  });
+
+  it('ciclo 2, item 4: não tem h1 (o h1 estático "Painel" fica na página, fora do Suspense)', () => {
+    render(<AdminHome name="Ana Teste" role="OWNER" />);
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
   });
 
   it.each([

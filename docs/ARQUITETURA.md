@@ -69,8 +69,8 @@ src/
     globals.css          ✅ tokens do design system
     trabalhos/[slug]/    ✅ página de projeto · not-found.tsx ✅ 404
     sobre/  contato/     ⏳ quando houver conteúdo real fornecido pelo fotógrafo
-    admin/               ⏳ painel (login, projetos, categorias, mídia, usuários)
-    api/auth/[...all]/   ⏳ Better Auth
+    admin/               ✅ entrar, definir-senha, painel provisório · ⏳ projetos, categorias, mídia, usuários
+    api/auth/[...all]/   ✅ Better Auth
     api/media/sign/      ⏳ assinatura de upload Cloudinary
   components/
     site/                ✅ header, hero, grade editorial, card, filtro, rodapé, aviso demo
@@ -78,7 +78,7 @@ src/
     admin/               ⏳
   content/               ✅ demo.ts — conteúdo de DEMONSTRAÇÃO (fonte do seed, fallback sem banco e hero até a etapa 7)
   lib/                   ✅ funções puras e tipos de domínio
-  server/                ✅ env.ts, db.ts, mappers.ts, repositories/ · ⏳ auth.ts, cloudinary.ts
+  server/                ✅ env.ts, db.ts, mappers.ts, repositories/ , auth-env.ts, auth-options.ts, auth.ts, authz.ts · ⏳ cloudinary.ts
   test/                  ✅ setup do Vitest
 tests/e2e/               ✅ Playwright · tests/integration/ ✅ Postgres real
 ```
@@ -179,7 +179,9 @@ Permissões planejadas:
 | Gerir categorias | ✔ | ✔ | — |
 | Gerir usuários e papéis | ✔ | ✔ (exceto OWNER) | — |
 
-O cadastro público fica **desativado**; usuários são convidados por OWNER/ADMIN. O primeiro OWNER é criado por script de seed a partir de variáveis de ambiente.
+O cadastro público fica **desativado**; usuários são convidados por OWNER/ADMIN (etapa 8). O primeiro OWNER é criado por `npm run auth:owner`, que imprime um link de uso único (60 min) para definir a senha.
+
+**Sessões:** duram 7 dias. A renovação diária (`updateAge`) só estende a sessão no banco: os Server Components não regravam o cookie, então ele expira 7 dias após o login e o administrador entra de novo a cada semana (decisão aceita na TASK-05). **Rate limit:** fica no banco e é contado por IP (`x-vercel-forwarded-for`). Localmente (`next start`) todos os acessos vêm do loopback e caem no mesmo contador. Em produção, confira nos logs da Vercel que o aviso "Rate limiting could not determine a client IP" não aparece; sem IP, todos dividiriam o mesmo contador.
 
 ## 6. Integrações e variáveis de ambiente
 
@@ -191,7 +193,7 @@ Nenhum segredo é versionado. Os valores ficam em `.env.local` (desenvolvimento)
 | `DATABASE_URL` | servidor | 4 | conexão PostgreSQL (pooling em produção) |
 | `BETTER_AUTH_SECRET` | servidor | 5 | chave de assinatura de sessões (gerar com `npx @better-auth/cli secret` ou `openssl rand -base64 32`) |
 | `BETTER_AUTH_URL` | servidor | 5 | URL base da aplicação |
-| `SEED_OWNER_EMAIL` / `SEED_OWNER_NAME` | servidor (só no seed) | 5 | primeiro usuário OWNER; a senha é definida no primeiro acesso |
+| `SEED_OWNER_EMAIL` / `SEED_OWNER_NAME` | só no script `auth:owner` | 5 | primeiro usuário OWNER; a senha é definida pelo link de primeiro acesso |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | público | 6 | nome da conta Cloudinary (não é segredo) |
 | `CLOUDINARY_API_KEY` | servidor | 6 | assinatura de uploads |
 | `CLOUDINARY_API_SECRET` | servidor | 6 | assinatura de uploads — **nunca** expor |
@@ -208,7 +210,7 @@ Cada etapa é pequena, testável e passa pelo fluxo Teste → Dev → Teste → 
 | 3 | Testes E2E (Playwright) e auditoria de acessibilidade/performance | smoke desktop + mobile, axe | ✅ concluída |
 | 4 | Banco de dados: Docker Postgres + Prisma schema + migração + seed demo; repositório troca `content/demo.ts` por Prisma | `npm run db:migrate`, testes de repositório | ✅ concluída (as páginas ainda leem o conteúdo demo; a troca é a etapa 4b) |
 | 4b | Páginas públicas lendo do banco (estratégia de cache e do proxy de 404) | páginas servidas pelo Postgres, build sem banco continua possível | ✅ concluída (hero ainda demo até a etapa 7; pendências na spec) |
-| 5 | Autenticação: Better Auth, login, proteção do `/admin`, papéis | login/logout, acesso negado por papel | ⏳ |
+| 5 | Autenticação: Better Auth, login, proteção do `/admin`, papéis | login/logout, acesso negado por papel | ✅ concluída (pendências na spec) |
 | 6 | Cloudinary: assinatura de upload, upload de foto/vídeo, metadados salvos em `Media` | upload real com credenciais do usuário | ⏳ |
 | 7 | Painel: CRUD de projetos, categorias, ordenação, publicação | fluxos completos no painel | ⏳ |
 | 8 | Gestão de colaboradores e papéis | convite, troca de papel | ⏳ |

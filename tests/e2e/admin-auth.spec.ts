@@ -98,6 +98,20 @@ test.describe("TASK-05: /admin sem sessão", () => {
     await expectNoSevereAxeViolations(page, "/admin/definir-senha?token=…");
   });
 
+  test("ciclo 2, item 2: senha curta mostra a mensagem própria (o balão nativo não bloqueia o envio)", async ({
+    page,
+  }) => {
+    await gotoHydrated(page, "/admin/definir-senha?token=token-e2e-qualquer");
+    const form = page.locator("form").filter({ has: page.getByLabel("Nova senha") });
+    await expect(form).toBeVisible();
+    await page.getByLabel("Nova senha").fill("curta-11chr");
+    await page.getByLabel("Confirmar senha").fill("curta-11chr");
+    await page.getByRole("button", { name: "Definir senha" }).click();
+    // Com a validação nativa ativa, o Chromium mostraria o balão e não enviaria: o alerta ficaria vazio.
+    await expect(form.getByRole("alert")).toHaveText(/pelo menos 12 caracteres/i);
+    expect(await form.evaluate((el) => (el as HTMLFormElement).noValidate)).toBe(true);
+  });
+
   test("/admin/entrar não gera console.error nem pageerror", async ({ page }) => {
     const errors: string[] = [];
     page.on("console", (message) => {
@@ -113,7 +127,10 @@ test.describe("TASK-05: login e logout", () => {
   test("CA-3: senha errada mostra o erro genérico e não entra", async ({ page }) => {
     await gotoHydrated(page, "/admin/entrar");
     await fillLogin(page, "senha-errada-qualquer-123");
-    await expect(page.getByRole("alert")).toHaveText("E-mail ou senha inválidos.");
+    // O App Router também cria um role=alert (#__next-route-announcer__); o alerta que importa
+    // é o do formulário de login.
+    const form = page.locator("form").filter({ has: page.getByLabel("Senha") });
+    await expect(form.getByRole("alert")).toHaveText("E-mail ou senha inválidos.");
     expect(new URL(page.url()).pathname).toBe("/admin/entrar");
     await page.goto("/admin");
     expectLoginUrl(page.url(), "/admin");
@@ -131,9 +148,10 @@ test.describe("TASK-05: login e logout", () => {
     });
 
     await test.step("painel: nome, papel e texto honesto", async () => {
-      await expect(
-        page.getByRole("heading", { level: 1, name: `Olá, ${E2E_OWNER.name}` }),
-      ).toBeVisible();
+      // Ciclo 2, item 4: h1 estático "Painel"; a saudação é um parágrafo no conteúdo.
+      await expect(page.getByRole("heading", { level: 1, name: "Painel" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.getByText(`Olá, ${E2E_OWNER.name}`)).toBeVisible();
       await expect(page.getByText("Proprietário")).toBeVisible();
       await expect(page.getByText("O painel de projetos chega na próxima etapa.")).toBeVisible();
       await expectNoIndex(page);

@@ -119,6 +119,20 @@ describe("SetPasswordForm — campos e acessibilidade", () => {
     expect(screen.getByRole("button", { name: "Definir senha" })).toHaveAttribute("type", "submit");
   });
 
+  it('ciclo 2, item 1: o botão "Definir senha" tem foco visível com contorno em ink', () => {
+    render(<SetPasswordForm token={TOKEN} />);
+    const button = screen.getByRole("button", { name: "Definir senha" });
+    expect(button.className.split(/\s+/)).toContain("focus-visible:outline-ink");
+  });
+
+  it("ciclo 2, item 2: o formulário desativa a validação nativa (noValidate)", () => {
+    render(<SetPasswordForm token={TOKEN} />);
+    const form = screen.getByLabelText("Nova senha").closest("form") as HTMLFormElement;
+    expect(form).not.toBeNull();
+    expect(form.noValidate).toBe(true);
+    expect(form).toHaveAttribute("novalidate");
+  });
+
   it("não mostra o token na tela", () => {
     render(<SetPasswordForm token={TOKEN} />);
     expect(document.body).not.toHaveTextContent(TOKEN);
@@ -131,6 +145,15 @@ describe("SetPasswordForm — validação no cliente", () => {
     await fill(GOOD_PASSWORD, `${GOOD_PASSWORD}-x`);
     submitForm();
     expect(await screen.findByRole("alert")).toHaveTextContent(MISMATCH);
+    expect(auth.resetPassword).not.toHaveBeenCalled();
+  });
+
+  it("ciclo 2, item 2: senha curta enviada pelo botão → mensagem própria em role=alert (sem balão nativo)", async () => {
+    render(<SetPasswordForm token={TOKEN} />);
+    const user = await fill("12345678901", "12345678901");
+    // Clique real no botão: com a validação nativa ativa, o jsdom bloqueia o envio (minLength).
+    await user.click(screen.getByRole("button", { name: "Definir senha" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(TOO_SHORT);
     expect(auth.resetPassword).not.toHaveBeenCalled();
   });
 
@@ -190,6 +213,66 @@ describe("SetPasswordForm — erros da API", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(INVALID_LINK);
     expectNoForm();
     expect(document.body).not.toHaveTextContent("Invalid token");
+  });
+
+  it.each([
+    ["429 (rate limit)", { status: 429, message: "Too many requests" }, /muitas tentativas/i],
+    [
+      "PASSWORD_TOO_SHORT",
+      { status: 400, code: "PASSWORD_TOO_SHORT", message: "Password too short" },
+      TOO_SHORT,
+    ],
+    [
+      "PASSWORD_TOO_LONG",
+      { status: 400, code: "PASSWORD_TOO_LONG", message: "Password too long" },
+      /no máximo 128 caracteres/i,
+    ],
+    [
+      "erro desconhecido",
+      { status: 500, code: "INTERNAL", message: "Internal error" },
+      /não foi possível definir a senha/i,
+    ],
+  ])(
+    "%s → mensagem em pt-BR em role=alert, formulário mantido e botão reabilitado",
+    async (_label, error, expected) => {
+      auth.resetPassword.mockResolvedValue({ data: null, error });
+      render(<SetPasswordForm token={TOKEN} />);
+      const user = await fill(GOOD_PASSWORD, GOOD_PASSWORD);
+      await user.click(screen.getByRole("button", { name: "Definir senha" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(expected);
+      expect(screen.getByLabelText("Nova senha")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Definir senha" })).toBeEnabled();
+      expect(document.body).not.toHaveTextContent(error.message);
+      expect(document.body).not.toHaveTextContent(SUCCESS);
+    },
+  );
+
+  it("429 seguido de nova tentativa bem-sucedida → limpa o erro e mostra o sucesso", async () => {
+    auth.resetPassword
+      .mockResolvedValueOnce({ data: null, error: { status: 429 } })
+      .mockResolvedValueOnce({ data: { status: true }, error: null });
+    render(<SetPasswordForm token={TOKEN} />);
+    const user = await fill(GOOD_PASSWORD, GOOD_PASSWORD);
+    await user.click(screen.getByRole("button", { name: "Definir senha" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/muitas tentativas/i);
+    await user.click(screen.getByRole("button", { name: "Definir senha" }));
+    expect(await screen.findByText(SUCCESS)).toBeInTheDocument();
+    expect(auth.resetPassword).toHaveBeenCalledTimes(2);
+  });
+
+  it("senha com 129 caracteres → mensagem de máximo, sem chamar a API", async () => {
+    render(<SetPasswordForm token={TOKEN} />);
+    const long = "a".repeat(129);
+    // maxLength impede digitar além de 128; o valor é definido direto para testar a validação.
+    const [nova, confirmar] = [
+      screen.getByLabelText("Nova senha"),
+      screen.getByLabelText("Confirmar senha"),
+    ];
+    fireEvent.change(nova, { target: { value: long } });
+    fireEvent.change(confirmar, { target: { value: long } });
+    submitForm();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/no máximo 128 caracteres/i);
+    expect(auth.resetPassword).not.toHaveBeenCalled();
   });
 
   it("outro erro (ex.: rede) → alerta com texto, formulário mantido e botão reabilitado", async () => {
